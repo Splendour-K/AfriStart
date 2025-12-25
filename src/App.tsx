@@ -129,6 +129,11 @@ const App = () => (
                 <NotificationSettings />
               </ProtectedRoute>
             } />
+            <Route path="/settings/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />

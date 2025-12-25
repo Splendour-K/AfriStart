@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -150,10 +151,15 @@ const Profile = () => {
       subtitle="Manage your account and preferences"
       headerActions={
         !isEditing ? (
-          <Button variant="outline" onClick={() => setIsEditing(true)}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            Edit Profile
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost">
+              <Link to="/settings/notifications">Notification Settings</Link>
+            </Button>
+            <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Edit2 className="w-4 h-4 mr-2" />
+              Edit Profile
+            </Button>
+          </div>
         ) : (
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={handleCancel}>
