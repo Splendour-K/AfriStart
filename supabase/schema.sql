@@ -19,6 +19,11 @@ CREATE TABLE IF NOT EXISTS profiles (
   twitter_url TEXT,
   website_url TEXT,
   is_onboarded BOOLEAN DEFAULT FALSE,
+  verification_status TEXT CHECK (verification_status IN ('pending','approved','rejected')) DEFAULT 'approved',
+  verification_method TEXT CHECK (verification_method IN ('email_domain','document','manual')) DEFAULT 'email_domain',
+  verification_document_url TEXT,
+  reviewed_by_email TEXT,
+  reviewed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
@@ -179,6 +184,43 @@ CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Admin allowlist table for elevated RLS checks
+CREATE TABLE IF NOT EXISTS admin_emails (
+  email TEXT PRIMARY KEY
+);
+
+ALTER TABLE admin_emails ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role can manage admin emails" ON admin_emails
+  FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+-- Verification requests table
+CREATE TABLE IF NOT EXISTS verification_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  document_url TEXT NOT NULL,
+  status TEXT CHECK (status IN ('pending','approved','rejected')) DEFAULT 'pending',
+  note TEXT,
+  reviewer_email TEXT,
+  reviewed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+ALTER TABLE verification_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own verification requests" ON verification_requests
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create their own verification requests" ON verification_requests
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all verification requests" ON verification_requests
+  FOR SELECT USING ((auth.jwt() ->> 'email') IN (SELECT email FROM admin_emails));
+
+CREATE POLICY "Admins can update verification requests" ON verification_requests
+  FOR UPDATE USING ((auth.jwt() ->> 'email') IN (SELECT email FROM admin_emails))
+  WITH CHECK ((auth.jwt() ->> 'email') IN (SELECT email FROM admin_emails));
 
 CREATE TRIGGER update_startup_ideas_updated_at
   BEFORE UPDATE ON startup_ideas

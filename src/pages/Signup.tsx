@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff, Mail, Lock, User, GraduationCap, ArrowRight, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ const Signup = () => {
     password: "",
     confirmPassword: "",
   });
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -37,6 +39,11 @@ const Signup = () => {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const isSchoolEmail = (email: string) => {
+    const domain = email.split("@")[1]?.toLowerCase() || "";
+    return domain.includes(".edu") || domain.includes(".ac.");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,7 +69,18 @@ const Signup = () => {
 
     setIsLoading(true);
 
-    const { error } = await signUp(
+    const schoolEmail = isSchoolEmail(formData.email);
+
+    if (!schoolEmail && !documentFile) {
+      toast({
+        title: "Proof required",
+        description: "Please upload an admission letter or school ID to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error, user: newUser } = await signUp(
       formData.email,
       formData.password,
       formData.fullName,
@@ -79,10 +97,66 @@ const Signup = () => {
       return;
     }
 
-    toast({
-      title: "Welcome to AfriStart!",
-      description: "Your account has been created. Please check your email to verify your account, then complete your profile!",
-    });
+    try {
+      if (!newUser) {
+        throw new Error("Could not retrieve new user.");
+      }
+
+      if (schoolEmail) {
+        // Auto-approve using school email domain
+        await supabase
+          .from("profiles")
+          .update({ verification_status: "approved", verification_method: "email_domain" })
+          .eq("id", newUser.id);
+        toast({
+          title: "Welcome to AfriStart!",
+          description: "Your account is verified via your school email. Please complete onboarding.",
+        });
+      } else {
+        // Upload document and create verification request
+        const filePath = `verification-docs/${newUser.id}/${Date.now()}-${documentFile!.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("verification-docs")
+          .upload(filePath, documentFile!, { cacheControl: "3600", upsert: false });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage.from("verification-docs").getPublicUrl(filePath);
+        const documentUrl = publicUrlData.publicUrl;
+
+        await supabase.from("verification_requests").insert({
+          user_id: newUser.id,
+          document_url: documentUrl,
+          status: "pending",
+        });
+
+        await supabase
+          .from("profiles")
+          .update({
+            verification_status: "pending",
+            verification_method: "document",
+            verification_document_url: documentUrl,
+          })
+          .eq("id", newUser.id);
+
+        toast({
+          title: "Verification submitted",
+          description: "We received your document. Your account will be activated after admin review.",
+        });
+      }
+    } catch (postError: any) {
+      console.error(postError);
+      toast({
+        title: "Verification step failed",
+        description: postError?.message ?? "Please try again or contact support.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(false);
     navigate("/onboarding");
   };
@@ -177,7 +251,27 @@ const Signup = () => {
                   required
                 />
               </div>
+              {!isSchoolEmail(formData.email) && (
+                <p className="text-sm text-amber-600">Use your school email for instant approval.</p>
+              )}
             </div>
+
+            {!isSchoolEmail(formData.email) && (
+              <div className="space-y-2">
+                <Label htmlFor="document">Upload proof of enrollment</Label>
+                <Input
+                  id="document"
+                  name="document"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setDocumentFile(e.target.files?.[0] ?? null)}
+                  required
+                />
+                <p className="text-sm text-muted-foreground">
+                  Admission letter or school ID. Images or PDF are accepted.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="university">University</Label>

@@ -8,7 +8,7 @@ interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
   isAdmin: boolean;
-  signUp: (email: string, password: string, fullName: string, university: string) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string, fullName: string, university: string) => Promise<{ error: AuthError | null; user: User | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    return { error };
+    return { error, user: data.user };
   };
 
   // Sign in with email and password

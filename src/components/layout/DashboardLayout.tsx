@@ -46,7 +46,10 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
     { id: "resources", label: "Resources", icon: BookOpen, path: "/resources" },
     { id: "profile", label: "Profile", icon: Settings, path: "/profile" },
     ...(isAdmin
-      ? [{ id: "admin", label: "Admin", icon: Shield, path: "/admin/messages" }]
+      ? [
+          { id: "admin", label: "Admin Messages", icon: Shield, path: "/admin/messages" },
+          { id: "admin-verifications", label: "Verifications", icon: Shield, path: "/admin/verifications" },
+        ]
       : []),
   ];
 

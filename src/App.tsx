@@ -36,6 +36,7 @@ import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
 import AdminGroups from "./pages/AdminGroups";
 import NotificationSettings from "./pages/NotificationSettings";
+import AdminVerifications from "./pages/AdminVerifications";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,11 @@ const App = () => (
             <Route path="/admin/groups" element={
               <AdminRoute>
                 <AdminGroups />
+              </AdminRoute>
+            } />
+            <Route path="/admin/verifications" element={
+              <AdminRoute>
+                <AdminVerifications />
               </AdminRoute>
             } />
             
