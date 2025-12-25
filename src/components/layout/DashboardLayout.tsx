@@ -183,19 +183,19 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
       {/* Main Content */}
       <main className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border mt-14 lg:mt-0">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div>
+        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border mt-16 sm:mt-14 lg:mt-0">
+          <div className="flex flex-wrap items-center justify-between gap-4 px-4 sm:px-6 py-3 sm:py-4">
+            <div className="min-w-0">
               {title && (
-                <h1 className="font-display text-2xl font-bold text-foreground">{title}</h1>
+                <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground truncate">{title}</h1>
               )}
               {subtitle && (
-                <p className="text-muted-foreground">{subtitle}</p>
+                <p className="text-sm sm:text-base text-muted-foreground">{subtitle}</p>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-wrap justify-end w-full sm:w-auto">
               {headerActions}
-              <div className="relative w-64 hidden md:block">
+              <div className="relative w-full sm:w-64 hidden md:block">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="search"
@@ -209,7 +209,7 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-6 overflow-auto">
+        <div className="flex-1 p-4 sm:p-6 overflow-auto">
           {children}
         </div>
 

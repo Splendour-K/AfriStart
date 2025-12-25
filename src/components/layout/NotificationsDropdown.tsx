@@ -6,6 +6,7 @@ import {
   Clock3,
   Lightbulb,
   MessageSquare,
+  ShieldCheck,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -40,6 +41,7 @@ const categoryMeta: Record<NotificationCategory, { label: string; icon: typeof B
   group: { label: "Group", icon: Users, color: "bg-emerald-100 text-emerald-700" },
   idea: { label: "Idea", icon: Lightbulb, color: "bg-amber-100 text-amber-700" },
   system: { label: "Update", icon: Sparkles, color: "bg-purple-100 text-purple-700" },
+  admin: { label: "Admin", icon: ShieldCheck, color: "bg-rose-100 text-rose-700" },
 };
 
 const NotificationsDropdown = ({
@@ -64,7 +66,7 @@ const NotificationsDropdown = ({
   };
 
   const renderIcon = (category: NotificationCategory) => {
-    const meta = categoryMeta[category];
+    const meta = categoryMeta[category] ?? categoryMeta.system;
     const Icon = meta.icon;
     return (
       <span
@@ -138,7 +140,7 @@ const NotificationsDropdown = ({
               </div>
             ) : (
               notifications.map((item) => {
-                const meta = categoryMeta[item.category];
+                const meta = categoryMeta[item.category] ?? categoryMeta.system;
                 return (
                   <button
                     key={item.id}

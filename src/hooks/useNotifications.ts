@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
-export type NotificationCategory = "message" | "group" | "idea" | "system";
+export type NotificationCategory = "message" | "group" | "idea" | "system" | "admin";
 
 export interface NotificationItem {
   id: string;

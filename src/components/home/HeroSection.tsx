@@ -5,7 +5,7 @@ import heroBg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
+  <section className="relative min-h-[70vh] sm:min-h-screen flex items-center pt-24 pb-16 sm:pt-28 sm:pb-24 overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 ankara-diamond opacity-50" />
       
