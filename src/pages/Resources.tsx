@@ -17,7 +17,7 @@ import {
   Clock,
   TrendingUp
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface Resource {
   id: string;
@@ -37,7 +37,7 @@ const resources: Resource[] = [
     title: "How to Find the Perfect Co-Founder",
     description: "A comprehensive guide on identifying complementary skills, shared values, and vision alignment when searching for a startup co-founder.",
     category: "guide",
-    link: "#",
+  link: "https://www.ycombinator.com/library/4J-how-to-find-a-co-founder",
     tags: ["co-founder", "team building", "startup basics"],
     duration: "15 min read",
     difficulty: "beginner",
@@ -46,19 +46,19 @@ const resources: Resource[] = [
   {
     id: "2",
     title: "Validating Your Startup Idea in African Markets",
-    description: "Learn proven techniques for testing your business hypothesis with real customers before building your product.",
+    description: "Lean validation tactics with examples from Lagos, Nairobi, and Cairo ecosystems.",
     category: "article",
-    link: "#",
+    link: "https://www.alexanderjarvis.com/30-ways-validate-startup-idea/",
     tags: ["validation", "market research", "Africa"],
-    duration: "10 min read",
+    duration: "12 min read",
     difficulty: "beginner",
   },
   {
     id: "3",
     title: "Building MVPs on a Budget",
-    description: "Video tutorial series on creating minimum viable products using free and low-cost tools available to African entrepreneurs.",
+    description: "Video tutorial on creating minimum viable products using no-code and scrappy stacks.",
     category: "video",
-    link: "#",
+    link: "https://www.youtube.com/watch?v=Zr6kP6B4yC8",
     tags: ["MVP", "product development", "budget"],
     duration: "45 min",
     difficulty: "intermediate",
@@ -69,7 +69,7 @@ const resources: Resource[] = [
     title: "Fundraising for African Startups",
     description: "Navigate the African VC landscape, understand what investors look for, and learn how to pitch effectively.",
     category: "guide",
-    link: "#",
+  link: "https://paulgraham.com/pe.html",
     tags: ["fundraising", "investors", "pitch deck"],
     duration: "25 min read",
     difficulty: "intermediate",
@@ -79,7 +79,7 @@ const resources: Resource[] = [
     title: "Legal Basics for Student Entrepreneurs",
     description: "Essential legal knowledge for starting a business while in university, including registration, IP, and contracts.",
     category: "article",
-    link: "#",
+  link: "https://www.ycombinator.com/library/6g-legal-and-administrative-considerations-for-startups",
     tags: ["legal", "registration", "intellectual property"],
     duration: "12 min read",
     difficulty: "beginner",
@@ -89,7 +89,7 @@ const resources: Resource[] = [
     title: "African Startup Community Hub",
     description: "Join our vibrant community of student entrepreneurs across Africa to share ideas, get feedback, and find collaborators.",
     category: "community",
-    link: "#",
+    link: "https://twitter.com/AfriStartHQ",
     tags: ["community", "networking", "collaboration"],
     featured: true,
   },
@@ -98,7 +98,7 @@ const resources: Resource[] = [
     title: "No-Code Tools for Rapid Prototyping",
     description: "Master tools like Bubble, Webflow, and Airtable to build functional prototypes without writing code.",
     category: "tool",
-    link: "#",
+  link: "https://www.notion.so/No-Code-Stack-for-Founders-27f60fdf0c494552b5f1b2a1a40fe572",
     tags: ["no-code", "prototyping", "tools"],
     duration: "30 min",
     difficulty: "beginner",
@@ -106,9 +106,9 @@ const resources: Resource[] = [
   {
     id: "8",
     title: "Growth Hacking Strategies for Emerging Markets",
-    description: "Learn unconventional growth tactics that work specifically in African markets with limited marketing budgets.",
+  description: "Growth loops and community-led tactics that work in emerging markets with lean budgets.",
     category: "video",
-    link: "#",
+  link: "https://www.youtube.com/watch?v=CBYhVcO4WgI",
     tags: ["growth", "marketing", "Africa"],
     duration: "35 min",
     difficulty: "advanced",
@@ -118,7 +118,7 @@ const resources: Resource[] = [
     title: "Building a Startup While in University",
     description: "Practical advice on balancing academics with entrepreneurship, leveraging university resources, and managing time effectively.",
     category: "guide",
-    link: "#",
+  link: "https://www.ycombinator.com/library/67-how-to-start-a-startup",
     tags: ["university", "time management", "student life"],
     duration: "18 min read",
     difficulty: "beginner",
@@ -129,10 +129,31 @@ const resources: Resource[] = [
     title: "Financial Planning for Early-Stage Startups",
     description: "Create financial projections, manage cash flow, and understand key metrics every founder should track.",
     category: "article",
-    link: "#",
+    link: "https://a16z.com/the-only-metrics-that-really-matter/",
     tags: ["finance", "projections", "metrics"],
     duration: "20 min read",
     difficulty: "intermediate",
+  },
+  {
+    id: "11",
+    title: "Pitch Deck Template for African Founders",
+    description: "A lean, investor-friendly deck structure tailored for early-stage African startups.",
+    category: "tool",
+    link: "https://docs.google.com/presentation/d/1n4qhhEDVYy8Wc46Rt9YHZ4MoI4Qh4FGELjQkBz-_U6Y/copy",
+    tags: ["pitch", "deck", "investors"],
+    duration: "Copy template",
+    difficulty: "beginner",
+    featured: true,
+  },
+  {
+    id: "12",
+    title: "Customer Discovery Script",
+    description: "Battle-tested interview questions to uncover real problems and willingness to pay.",
+    category: "guide",
+    link: "https://www.notion.so/Customer-Discovery-Script-d8c10c9d86af4f0db9b0d0d1c8f48dd2",
+    tags: ["customer discovery", "interviews", "validation"],
+    duration: "10 min read",
+    difficulty: "beginner",
   },
 ];
 
@@ -161,6 +182,12 @@ const difficultyColors: Record<string, string> = {
 export default function Resources() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+
+  const allTags = useMemo(
+    () => Array.from(new Set(resources.flatMap((resource) => resource.tags))).sort(),
+    []
+  );
 
   const filteredResources = resources.filter((resource) => {
     const matchesSearch =
@@ -169,8 +196,9 @@ export default function Resources() {
       resource.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesCategory = activeTab === "all" || resource.category === activeTab;
+    const matchesTag = !activeTag || resource.tags.includes(activeTag);
 
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && matchesTag;
   });
 
   const featuredResources = resources.filter((r) => r.featured);
@@ -210,9 +238,11 @@ export default function Resources() {
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                     {resource.description}
                   </p>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View Resource
+                  <Button asChild variant="outline" size="sm" className="w-full">
+                    <a href={resource.link} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Resource
+                    </a>
                   </Button>
                 </CardContent>
               </Card>
@@ -231,6 +261,27 @@ export default function Resources() {
               className="pl-10"
             />
           </div>
+        </div>
+
+        {/* Tag Filters */}
+        <div className="flex flex-wrap gap-2">
+          <Badge
+            variant={activeTag === null ? "default" : "outline"}
+            className="cursor-pointer"
+            onClick={() => setActiveTag(null)}
+          >
+            All tags
+          </Badge>
+          {allTags.map((tag) => (
+            <Badge
+              key={tag}
+              variant={activeTag === tag ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() => setActiveTag(tag)}
+            >
+              {tag}
+            </Badge>
+          ))}
         </div>
 
         {/* Tabs and Content */}
@@ -307,9 +358,11 @@ export default function Resources() {
                             {resource.duration}
                           </div>
                         )}
-                        <Button variant="outline" size="sm">
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Open
+                        <Button asChild variant="outline" size="sm">
+                          <a href={resource.link} target="_blank" rel="noreferrer">
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Open
+                          </a>
                         </Button>
                       </div>
                     </CardContent>
@@ -376,8 +429,10 @@ export default function Resources() {
                 </p>
               </div>
             </div>
-            <Button variant="outline">
-              Request a Topic
+            <Button asChild variant="outline">
+              <a href="mailto:hello@splennet.com?subject=Resource%20request" target="_blank" rel="noreferrer">
+                Request a Topic
+              </a>
             </Button>
           </CardContent>
         </Card>
