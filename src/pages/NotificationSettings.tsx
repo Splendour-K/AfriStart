@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { NotificationPreferences, useNotificationPreferences, useSaveNotificationPreferences } from "@/hooks/useNotifications";
 
 interface PreferenceToggle {
   key: string;
@@ -50,17 +51,32 @@ const categories: PreferenceToggle[] = [
 ];
 
 const NotificationSettings = () => {
-  const [prefs, setPrefs] = useState<Record<string, boolean>>({
+  const { data: prefsFromApi, isLoading } = useNotificationPreferences();
+  const savePrefs = useSaveNotificationPreferences();
+  const [prefs, setPrefs] = useState<NotificationPreferences>({
     email: true,
     push: true,
     messages: true,
     mentions: true,
     groups: true,
     product: false,
+    digest: true,
+    priority: true,
+    quiet: false,
   });
 
-  const toggle = (key: string) => {
+  useEffect(() => {
+    if (prefsFromApi) {
+      setPrefs(prefsFromApi);
+    }
+  }, [prefsFromApi]);
+
+  const toggle = (key: keyof NotificationPreferences) => {
     setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSave = async () => {
+    await savePrefs.mutateAsync(prefs);
   };
 
   return (
@@ -81,7 +97,12 @@ const NotificationSettings = () => {
                   <Label className="text-base font-medium">{item.label}</Label>
                   <p className="text-sm text-muted-foreground">{item.description}</p>
                 </div>
-                <Switch checked={prefs[item.key]} onCheckedChange={() => toggle(item.key)} aria-label={item.label} />
+                <Switch
+                  checked={prefs[item.key as keyof NotificationPreferences]}
+                  disabled={isLoading || savePrefs.isPending}
+                  onCheckedChange={() => toggle(item.key as keyof NotificationPreferences)}
+                  aria-label={item.label}
+                />
               </div>
             ))}
           </CardContent>
@@ -99,7 +120,12 @@ const NotificationSettings = () => {
                   <Label className="text-base font-medium">{item.label}</Label>
                   <p className="text-sm text-muted-foreground">{item.description}</p>
                 </div>
-                <Switch checked={prefs[item.key]} onCheckedChange={() => toggle(item.key)} aria-label={item.label} />
+                <Switch
+                  checked={prefs[item.key as keyof NotificationPreferences]}
+                  disabled={isLoading || savePrefs.isPending}
+                  onCheckedChange={() => toggle(item.key as keyof NotificationPreferences)}
+                  aria-label={item.label}
+                />
               </div>
             ))}
           </CardContent>
@@ -119,32 +145,64 @@ const NotificationSettings = () => {
               <Label className="text-base font-medium">Weekly digest</Label>
               <p className="text-sm text-muted-foreground">A curated recap of messages, group activity, and votes.</p>
             </div>
-            <Switch checked={prefs["digest"] ?? true} onCheckedChange={() => toggle("digest")} aria-label="Weekly digest" />
+            <Switch
+              checked={prefs["digest"] ?? true}
+              disabled={isLoading || savePrefs.isPending}
+              onCheckedChange={() => toggle("digest")}
+              aria-label="Weekly digest"
+            />
           </div>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <Label className="text-base font-medium">Smart priority</Label>
               <p className="text-sm text-muted-foreground">Highlight approvals, mentions, and direct replies first.</p>
             </div>
-            <Switch checked={prefs["priority"] ?? true} onCheckedChange={() => toggle("priority")} aria-label="Smart priority" />
+            <Switch
+              checked={prefs["priority"] ?? true}
+              disabled={isLoading || savePrefs.isPending}
+              onCheckedChange={() => toggle("priority")}
+              aria-label="Smart priority"
+            />
           </div>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <Label className="text-base font-medium">Quiet hours</Label>
               <p className="text-sm text-muted-foreground">Mute push alerts overnight while keeping email recaps on.</p>
             </div>
-            <Switch checked={prefs["quiet"] ?? false} onCheckedChange={() => toggle("quiet")} aria-label="Quiet hours" />
+            <Switch
+              checked={prefs["quiet"] ?? false}
+              disabled={isLoading || savePrefs.isPending}
+              onCheckedChange={() => toggle("quiet")}
+              aria-label="Quiet hours"
+            />
           </div>
         </CardContent>
       </Card>
 
       <div className="mt-6 flex items-center gap-3 text-sm text-muted-foreground">
-        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-        Settings are saved locally for now. Wire these toggles to your backend when notification prefs are ready.
+        {savePrefs.isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin text-terracotta" />
+        ) : (
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+        )}
+        {savePrefs.isSuccess ? "Preferences saved." : "Changes save to your account."}
       </div>
 
-      <div className="mt-4">
-        <Button disabled variant="secondary">Save changes</Button>
+      <div className="mt-4 flex gap-3">
+        <Button onClick={handleSave} disabled={savePrefs.isPending || isLoading}>
+          {savePrefs.isPending ? (
+            <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving</span>
+          ) : (
+            "Save changes"
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={isLoading || savePrefs.isPending}
+          onClick={() => prefsFromApi && setPrefs(prefsFromApi)}
+        >
+          Reset
+        </Button>
       </div>
     </DashboardLayout>
   );
