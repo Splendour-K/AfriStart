@@ -313,6 +313,25 @@ export function useUpdateGoal() {
   });
 }
 
+// Hook to delete a goal
+export function useDeleteGoal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (goalId: string) => {
+      const { error } = await supabase
+        .from('goals')
+        .delete()
+        .eq('id', goalId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+    },
+  });
+}
+
 // Hook to fetch startup ideas
 export function useStartupIdeas(userId?: string) {
   const { user } = useAuth();

@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import Header from "@/components/layout/Header";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,18 +30,31 @@ import {
   Clock,
   Circle,
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { goalsApi, Goal } from "@/lib/api";
+import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/hooks/useMatching";
 import { useToast } from "@/hooks/use-toast";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import { format } from "date-fns";
 
+type GoalStatus = "pending" | "in-progress" | "completed";
+
+interface Goal {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  due_date?: string;
+  status: GoalStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 const Goals = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { data: goals = [], isLoading } = useGoals();
+  const createGoal = useCreateGoal();
+  const updateGoal = useUpdateGoal();
+  const deleteGoal = useDeleteGoal();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   
@@ -51,71 +62,40 @@ const Goals = () => {
     title: "",
     description: "",
     due_date: "",
-    status: "pending" as Goal["status"],
+    status: "pending" as GoalStatus,
   });
-
-  useEffect(() => {
-    if (user) {
-      loadGoals();
-    }
-  }, [user]);
-
-  const loadGoals = async () => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      const { data, error } = await goalsApi.getAll(user.id);
-      if (error) throw error;
-      setGoals(data || []);
-    } catch (error) {
-      console.error("Error loading goals:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load goals",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !formData.title.trim()) return;
+    if (!formData.title.trim()) return;
 
     try {
-      setSaving(true);
-      
       if (editingGoal) {
-        const { error } = await goalsApi.update(editingGoal.id, {
+        await updateGoal.mutateAsync({
+          id: editingGoal.id,
           title: formData.title,
           description: formData.description || undefined,
           due_date: formData.due_date || undefined,
           status: formData.status,
         });
-        if (error) throw error;
         toast({
           title: "Goal updated",
           description: "Your goal has been updated successfully.",
         });
       } else {
-        const { error } = await goalsApi.create({
-          user_id: user.id,
+        await createGoal.mutateAsync({
           title: formData.title,
           description: formData.description || undefined,
           due_date: formData.due_date || undefined,
-          status: formData.status,
         });
-        if (error) throw error;
         toast({
           title: "Goal created",
           description: "Your new goal has been added.",
         });
       }
-      
+
       setDialogOpen(false);
       resetForm();
-      await loadGoals();
     } catch (error) {
       console.error("Error saving goal:", error);
       toast({
@@ -123,20 +103,16 @@ const Goals = () => {
         description: "Failed to save goal",
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
     }
   };
 
   const handleDelete = async (goalId: string) => {
     try {
-      const { error } = await goalsApi.delete(goalId);
-      if (error) throw error;
+      await deleteGoal.mutateAsync(goalId);
       toast({
         title: "Goal deleted",
         description: "The goal has been removed.",
       });
-      await loadGoals();
     } catch (error) {
       console.error("Error deleting goal:", error);
       toast({
@@ -147,11 +123,9 @@ const Goals = () => {
     }
   };
 
-  const handleStatusChange = async (goalId: string, newStatus: Goal["status"]) => {
+  const handleStatusChange = async (goalId: string, newStatus: GoalStatus) => {
     try {
-      const { error } = await goalsApi.update(goalId, { status: newStatus });
-      if (error) throw error;
-      await loadGoals();
+      await updateGoal.mutateAsync({ id: goalId, status: newStatus });
     } catch (error) {
       console.error("Error updating goal status:", error);
       toast({
@@ -183,7 +157,7 @@ const Goals = () => {
     setDialogOpen(true);
   };
 
-  const getStatusIcon = (status: Goal["status"]) => {
+  const getStatusIcon = (status: GoalStatus) => {
     switch (status) {
       case "completed":
         return <Check className="w-4 h-4 text-forest" />;
@@ -194,7 +168,7 @@ const Goals = () => {
     }
   };
 
-  const getStatusColor = (status: Goal["status"]) => {
+  const getStatusColor = (status: GoalStatus) => {
     switch (status) {
       case "completed":
         return "bg-forest/10 text-forest border-forest/20";
@@ -206,218 +180,198 @@ const Goals = () => {
   };
 
   // Group goals by status
-  const pendingGoals = goals.filter((g) => g.status === "pending");
-  const inProgressGoals = goals.filter((g) => g.status === "in-progress");
-  const completedGoals = goals.filter((g) => g.status === "completed");
+  const pendingGoals = goals.filter((g: Goal) => g.status === "pending");
+  const inProgressGoals = goals.filter((g: Goal) => g.status === "in-progress");
+  const completedGoals = goals.filter((g: Goal) => g.status === "completed");
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-cream to-cream/50">
-        <Header />
-        <main className="container py-8">
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-terracotta" />
-          </div>
-        </main>
-      </div>
-    );
-  }
+  const saving = createGoal.isPending || updateGoal.isPending;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream to-cream/50">
-      <Header />
-      <main className="container py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Your Goals
-              </h1>
-              <p className="text-muted-foreground">
-                Track your startup journey milestones
-              </p>
-            </div>
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button variant="hero">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Goal
+    <DashboardLayout
+      title="Your Goals"
+      subtitle="Track your startup journey milestones"
+      headerActions={
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button variant="hero">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Goal
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingGoal ? "Edit Goal" : "Create New Goal"}
+              </DialogTitle>
+              <DialogDescription>
+                {editingGoal
+                  ? "Update your goal details below."
+                  : "Set a new goal to track your progress."}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  placeholder="e.g., Complete MVP"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (optional)</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Add more details about this goal..."
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="due_date">Due Date (optional)</Label>
+                  <Input
+                    id="due_date"
+                    type="date"
+                    value={formData.due_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, due_date: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value: GoalStatus) =>
+                      setFormData({ ...formData, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDialogOpen(false);
+                    resetForm();
+                  }}
+                >
+                  Cancel
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingGoal ? "Edit Goal" : "Create New Goal"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingGoal
-                      ? "Update your goal details below."
-                      : "Set a new goal to track your progress."}
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                      placeholder="e.g., Complete MVP"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description (optional)</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({ ...formData, description: e.target.value })
-                      }
-                      placeholder="Add more details about this goal..."
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="due_date">Due Date (optional)</Label>
-                      <Input
-                        id="due_date"
-                        type="date"
-                        value={formData.due_date}
-                        onChange={(e) =>
-                          setFormData({ ...formData, due_date: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value: Goal["status"]) =>
-                          setFormData({ ...formData, status: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="in-progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setDialogOpen(false);
-                        resetForm();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" variant="hero" disabled={saving}>
-                      {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      {editingGoal ? "Update" : "Create"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                <Button type="submit" variant="hero" disabled={saving}>
+                  {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingGoal ? "Update" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      }
+    >
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-terracotta" />
+        </div>
+      ) : goals.length === 0 ? (
+        <div className="text-center py-12 bg-card rounded-xl border border-border">
+          <Target className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No goals yet</h3>
+          <p className="text-muted-foreground mb-4">
+            Start tracking your startup journey by adding your first goal
+          </p>
+          <Button variant="hero" onClick={() => setDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Your First Goal
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Pending */}
+          <div>
+            <h3 className="font-semibold text-muted-foreground mb-4 flex items-center gap-2">
+              <Circle className="w-4 h-4" />
+              Pending ({pendingGoals.length})
+            </h3>
+            <div className="space-y-3">
+              {pendingGoals.map((goal: Goal) => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  onEdit={() => openEditDialog(goal)}
+                  onDelete={() => handleDelete(goal.id)}
+                  onStatusChange={handleStatusChange}
+                  getStatusIcon={getStatusIcon}
+                  getStatusColor={getStatusColor}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Goals Columns */}
-          {goals.length === 0 ? (
-            <div className="text-center py-12 bg-background rounded-xl border border-border">
-              <Target className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No goals yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Start tracking your startup journey by adding your first goal
-              </p>
-              <Button variant="hero" onClick={() => setDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Goal
-              </Button>
+          {/* In Progress */}
+          <div>
+            <h3 className="font-semibold text-ochre mb-4 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              In Progress ({inProgressGoals.length})
+            </h3>
+            <div className="space-y-3">
+              {inProgressGoals.map((goal: Goal) => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  onEdit={() => openEditDialog(goal)}
+                  onDelete={() => handleDelete(goal.id)}
+                  onStatusChange={handleStatusChange}
+                  getStatusIcon={getStatusIcon}
+                  getStatusColor={getStatusColor}
+                />
+              ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Pending */}
-              <div>
-                <h3 className="font-semibold text-muted-foreground mb-4 flex items-center gap-2">
-                  <Circle className="w-4 h-4" />
-                  Pending ({pendingGoals.length})
-                </h3>
-                <div className="space-y-3">
-                  {pendingGoals.map((goal) => (
-                    <GoalCard
-                      key={goal.id}
-                      goal={goal}
-                      onEdit={() => openEditDialog(goal)}
-                      onDelete={() => handleDelete(goal.id)}
-                      onStatusChange={handleStatusChange}
-                      getStatusIcon={getStatusIcon}
-                      getStatusColor={getStatusColor}
-                    />
-                  ))}
-                </div>
-              </div>
+          </div>
 
-              {/* In Progress */}
-              <div>
-                <h3 className="font-semibold text-ochre mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  In Progress ({inProgressGoals.length})
-                </h3>
-                <div className="space-y-3">
-                  {inProgressGoals.map((goal) => (
-                    <GoalCard
-                      key={goal.id}
-                      goal={goal}
-                      onEdit={() => openEditDialog(goal)}
-                      onDelete={() => handleDelete(goal.id)}
-                      onStatusChange={handleStatusChange}
-                      getStatusIcon={getStatusIcon}
-                      getStatusColor={getStatusColor}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Completed */}
-              <div>
-                <h3 className="font-semibold text-forest mb-4 flex items-center gap-2">
-                  <Check className="w-4 h-4" />
-                  Completed ({completedGoals.length})
-                </h3>
-                <div className="space-y-3">
-                  {completedGoals.map((goal) => (
-                    <GoalCard
-                      key={goal.id}
-                      goal={goal}
-                      onEdit={() => openEditDialog(goal)}
-                      onDelete={() => handleDelete(goal.id)}
-                      onStatusChange={handleStatusChange}
-                      getStatusIcon={getStatusIcon}
-                      getStatusColor={getStatusColor}
-                    />
-                  ))}
-                </div>
-              </div>
+          {/* Completed */}
+          <div>
+            <h3 className="font-semibold text-forest mb-4 flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Completed ({completedGoals.length})
+            </h3>
+            <div className="space-y-3">
+              {completedGoals.map((goal: Goal) => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  onEdit={() => openEditDialog(goal)}
+                  onDelete={() => handleDelete(goal.id)}
+                  onStatusChange={handleStatusChange}
+                  getStatusIcon={getStatusIcon}
+                  getStatusColor={getStatusColor}
+                />
+              ))}
             </div>
-          )}
+          </div>
         </div>
-      </main>
-    </div>
+      )}
+    </DashboardLayout>
   );
 };
 
@@ -426,9 +380,9 @@ interface GoalCardProps {
   goal: Goal;
   onEdit: () => void;
   onDelete: () => void;
-  onStatusChange: (goalId: string, status: Goal["status"]) => void;
-  getStatusIcon: (status: Goal["status"]) => React.ReactNode;
-  getStatusColor: (status: Goal["status"]) => string;
+  onStatusChange: (goalId: string, status: GoalStatus) => void;
+  getStatusIcon: (status: GoalStatus) => React.ReactNode;
+  getStatusColor: (status: GoalStatus) => string;
 }
 
 const GoalCard = ({
@@ -440,7 +394,7 @@ const GoalCard = ({
   getStatusColor,
 }: GoalCardProps) => {
   return (
-    <div className="p-4 bg-background rounded-xl border border-border hover:shadow-md transition-shadow">
+    <div className="p-4 bg-card rounded-xl border border-border hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2 mb-2">
         <h4 className="font-medium text-sm">{goal.title}</h4>
         <div className="flex items-center gap-1">
@@ -474,7 +428,7 @@ const GoalCard = ({
         )}
         <Select
           value={goal.status}
-          onValueChange={(value: Goal["status"]) => onStatusChange(goal.id, value)}
+          onValueChange={(value: GoalStatus) => onStatusChange(goal.id, value)}
         >
           <SelectTrigger className={`h-7 text-xs w-auto ${getStatusColor(goal.status)}`}>
             <div className="flex items-center gap-1">

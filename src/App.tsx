@@ -15,9 +15,11 @@ import Dashboard from "./pages/Dashboard";
 import Discover from "./pages/Discover";
 import Connections from "./pages/Connections";
 import Ideas from "./pages/Ideas";
+import Goals from "./pages/Goals";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
+import Resources from "./pages/Resources";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +63,16 @@ const App = () => (
             <Route path="/ideas" element={
               <ProtectedRoute>
                 <Ideas />
+              </ProtectedRoute>
+            } />
+            <Route path="/goals" element={
+              <ProtectedRoute>
+                <Goals />
+              </ProtectedRoute>
+            } />
+            <Route path="/resources" element={
+              <ProtectedRoute>
+                <Resources />
               </ProtectedRoute>
             } />
             <Route path="/messages" element={

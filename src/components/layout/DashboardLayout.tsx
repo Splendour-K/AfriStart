@@ -14,7 +14,8 @@ import {
   Search,
   Menu,
   X,
-  Lightbulb
+  Lightbulb,
+  Target
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -37,6 +38,7 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
     { id: "discover", label: "Discover", icon: Compass, path: "/discover" },
     { id: "connections", label: "Connections", icon: Users, path: "/connections" },
     { id: "ideas", label: "My Ideas", icon: Lightbulb, path: "/ideas" },
+    { id: "goals", label: "Goals", icon: Target, path: "/goals" },
     { id: "messages", label: "Messages", icon: MessageSquare, path: "/messages" },
     { id: "resources", label: "Resources", icon: BookOpen, path: "/resources" },
     { id: "profile", label: "Profile", icon: Settings, path: "/profile" },
