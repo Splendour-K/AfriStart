@@ -61,6 +61,54 @@ export const ProtectedRoute = ({ children, requireOnboarding = true }: Protected
   return <>{children}</>;
 };
 
+interface AdminRouteProps {
+  children: React.ReactNode;
+}
+
+export const AdminRoute = ({ children }: AdminRouteProps) => {
+  const { user, isAdmin, isLoading } = useAuth();
+  const location = useLocation();
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
+
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => setLoadingTooLong(true), 3000);
+      return () => clearTimeout(timer);
+    }
+    setLoadingTooLong(false);
+  }, [isLoading]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-terracotta" />
+          <p className="text-muted-foreground">Checking admin access...</p>
+          {loadingTooLong && (
+            <div className="flex flex-col items-center gap-2 mt-4">
+              <p className="text-sm text-muted-foreground">Taking longer than expected...</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh Page
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return <Navigate to="/" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
+
 interface PublicOnlyRouteProps {
   children: React.ReactNode;
 }

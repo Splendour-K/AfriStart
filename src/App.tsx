@@ -30,6 +30,8 @@ import Pricing from "./pages/Pricing";
 import FAQ from "./pages/FAQ";
 import Careers from "./pages/Careers";
 import Blog from "./pages/Blog";
+import AdminMessages from "./pages/AdminMessages";
+import { AdminRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +58,11 @@ const App = () => (
             <Route path="/faq" element={<FAQ />} />
             <Route path="/careers" element={<Careers />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/admin/messages" element={
+              <AdminRoute>
+                <AdminMessages />
+              </AdminRoute>
+            } />
             
             {/* Protected routes */}
             <Route path="/onboarding" element={

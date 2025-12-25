@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   isLoading: boolean;
+  isAdmin: boolean;
   signUp: (email: string, password: string, fullName: string, university: string) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
@@ -22,6 +23,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Admin allowlist (comma-separated emails in env)
+  const adminAllowlist = (import.meta.env.VITE_ADMIN_EMAILS || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  const isAdmin = !!(user?.email && adminAllowlist.includes(user.email.toLowerCase()));
 
   // Fetch user profile from profiles table with a small timeout to avoid blocking UI
   const fetchProfile = async (userId: string) => {
@@ -233,6 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     profile,
     isLoading,
+    isAdmin,
     signUp,
     signIn,
     signInWithGoogle,

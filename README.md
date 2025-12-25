@@ -49,6 +49,7 @@ Create a `.env` file in the root directory:
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_ADMIN_EMAILS=admin1@example.com,admin2@example.com
 ```
 
 ### 4. Enable Google OAuth (Optional)

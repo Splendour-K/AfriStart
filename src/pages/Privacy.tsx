@@ -22,7 +22,7 @@ const sections = [
     title: "Sharing & Disclosure",
     items: [
       "We do not sell your data. We only share with service providers needed to run the platform (e.g., hosting, analytics).",
-      "You control what appears on your public profile. Messages stay private between participants.",
+      "You control what appears on your public profile. Messages are stored securely and may be reviewed by authorized admins for trust & safety (e.g., abuse prevention, compliance).",
       "We may disclose information to comply with law or protect platform security.",
     ],
   },
