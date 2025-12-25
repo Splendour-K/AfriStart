@@ -196,8 +196,10 @@ CREATE TRIGGER update_goals_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- Groups feature tables
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TABLE IF NOT EXISTS groups (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
   university TEXT NOT NULL,
@@ -207,7 +209,7 @@ CREATE TABLE IF NOT EXISTS groups (
 );
 
 CREATE TABLE IF NOT EXISTS group_memberships (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   group_id UUID REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   status TEXT CHECK (status IN ('pending','approved','rejected')) DEFAULT 'pending',
@@ -218,7 +220,7 @@ CREATE TABLE IF NOT EXISTS group_memberships (
 );
 
 CREATE TABLE IF NOT EXISTS group_ideas (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   group_id UUID REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
   author_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
@@ -229,7 +231,7 @@ CREATE TABLE IF NOT EXISTS group_ideas (
 );
 
 CREATE TABLE IF NOT EXISTS group_idea_votes (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   idea_id UUID REFERENCES group_ideas(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
@@ -237,7 +239,7 @@ CREATE TABLE IF NOT EXISTS group_idea_votes (
 );
 
 CREATE TABLE IF NOT EXISTS group_idea_comments (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   idea_id UUID REFERENCES group_ideas(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   content TEXT NOT NULL,
@@ -245,7 +247,7 @@ CREATE TABLE IF NOT EXISTS group_idea_comments (
 );
 
 CREATE TABLE IF NOT EXISTS group_idea_members (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   idea_id UUID REFERENCES group_ideas(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   role TEXT CHECK (role IN ('collaborator','lead','owner')) DEFAULT 'collaborator',
@@ -322,17 +324,55 @@ CREATE POLICY "Group members can comment" ON group_idea_comments
   );
 
 -- Idea collaborators
+CREATE OR REPLACE FUNCTION can_manage_idea_members(p_idea_id uuid)
+RETURNS boolean AS $$
+BEGIN
+  RETURN
+    EXISTS (
+      SELECT 1 FROM group_memberships gm
+      JOIN group_ideas gi ON gi.id = p_idea_id AND gm.group_id = gi.group_id
+      WHERE gm.user_id = auth.uid() AND gm.status IN ('approved','pending')
+    )
+    OR auth.uid() = (SELECT author_id FROM group_ideas WHERE id = p_idea_id)
+    OR auth.uid() = (
+      SELECT g.owner_id FROM group_ideas gi
+      JOIN groups g ON g.id = gi.group_id
+      WHERE gi.id = p_idea_id
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 CREATE POLICY "Idea collaborators readable" ON group_idea_members
   FOR SELECT USING (true);
 
-CREATE POLICY "Group members can join idea" ON group_idea_members
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM group_memberships gm
-      JOIN group_ideas gi ON gi.id = idea_id
-      WHERE gm.group_id = gi.group_id AND gm.user_id = auth.uid() AND gm.status = 'approved'
-    )
+CREATE POLICY "Group members can manage idea membership" ON group_idea_members
+  FOR INSERT WITH CHECK (can_manage_idea_members(idea_id));
+
+CREATE POLICY "Group members can update idea membership" ON group_idea_members
+  FOR UPDATE USING (can_manage_idea_members(idea_id))
+  WITH CHECK (can_manage_idea_members(idea_id));
+
+CREATE POLICY "Users can leave idea" ON group_idea_members
+  FOR DELETE USING (
+    auth.uid() = user_id
+    OR can_manage_idea_members(idea_id)
   );
+
+-- Unvote and delete permissions
+CREATE POLICY "Group members can unvote" ON group_idea_votes
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own group comments" ON group_idea_comments
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Authors can delete their group ideas" ON group_ideas
+  FOR DELETE USING (
+    auth.uid() = author_id
+    OR auth.uid() = (SELECT owner_id FROM groups WHERE id = group_id)
+  );
+
+CREATE POLICY "Owners can delete their groups" ON groups
+  FOR DELETE USING (auth.uid() = owner_id);
 
 -- Function to handle new user creation (auto-create profile)
 CREATE OR REPLACE FUNCTION handle_new_user()
