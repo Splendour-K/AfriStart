@@ -35,6 +35,7 @@ import { AdminRoute } from "@/components/ProtectedRoute";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
 import AdminGroups from "./pages/AdminGroups";
+import NotificationSettings from "./pages/NotificationSettings";
 
 const queryClient = new QueryClient();
 
@@ -121,6 +122,11 @@ const App = () => (
             <Route path="/messages" element={
               <ProtectedRoute>
                 <Messages />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings/notifications" element={
+              <ProtectedRoute>
+                <NotificationSettings />
               </ProtectedRoute>
             } />
             <Route path="/profile" element={

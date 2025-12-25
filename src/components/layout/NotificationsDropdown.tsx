@@ -1,4 +1,3 @@
-import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -20,17 +19,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-
-export type NotificationCategory = "message" | "group" | "idea" | "system";
-
-export interface NotificationItem {
-  id: string;
-  title: string;
-  description?: string;
-  timestamp: Date;
-  category: NotificationCategory;
-  unread?: boolean;
-}
+import {
+  NotificationCategory,
+  NotificationItem,
+  placeholderNotifications,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+  useRealtimeNotifications,
+} from "@/hooks/useNotifications";
 
 interface NotificationsDropdownProps {
   buttonVariant?: "ghost" | "outline" | "secondary";
@@ -50,51 +47,20 @@ const NotificationsDropdown = ({
   buttonSize = "icon",
   className,
 }: NotificationsDropdownProps) => {
-  const initialData = useMemo<NotificationItem[]>(
-    () => [
-      {
-        id: "1",
-        title: "You have 3 new collaboration requests",
-        description: "Review join requests for " + "Fintech Builders", // simple placeholder
-        timestamp: new Date(Date.now() - 1000 * 60 * 15),
-        category: "group",
-        unread: true,
-      },
-      {
-        id: "2",
-        title: "Ada left a comment on your idea",
-        description: "\"Can we expand to SMEs in Lagos first?\"",
-        timestamp: new Date(Date.now() - 1000 * 60 * 55),
-        category: "idea",
-        unread: true,
-      },
-      {
-        id: "3",
-        title: "New message from Tunde",
-        description: "Let's align on the pitch deck this weekend.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4),
-        category: "message",
-      },
-      {
-        id: "4",
-        title: "Platform update",
-        description: "Voting is live in your groups. Cast your votes to prioritize ideas.",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 26),
-        category: "system",
-      },
-    ],
-    []
-  );
+  const { data: notifications = placeholderNotifications, isLoading } = useNotifications();
+  useRealtimeNotifications();
+  const { mutate: markNotificationRead } = useMarkNotificationRead();
+  const { mutate: markAllNotificationsRead, isPending: isMarkingAll } = useMarkAllNotificationsRead();
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>(initialData);
-  const unreadCount = notifications.filter((item) => item.unread).length;
+  const unreadCount = notifications.filter((item) => !item.read_at).length;
 
   const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, unread: false } : item)));
+    markNotificationRead(id);
   };
 
   const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    if (unreadCount === 0) return;
+    markAllNotificationsRead();
   };
 
   const renderIcon = (category: NotificationCategory) => {
@@ -141,9 +107,9 @@ const NotificationsDropdown = ({
           </div>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+              <Button variant="ghost" size="sm" onClick={markAllAsRead} disabled={isMarkingAll}>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Mark all read
+                {isMarkingAll ? "Marking..." : "Mark all read"}
               </Button>
             )}
           </div>
@@ -151,7 +117,20 @@ const NotificationsDropdown = ({
         <Separator />
         <ScrollArea className="max-h-96">
           <div className="divide-y divide-border">
-            {notifications.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col gap-2 px-4 py-6">
+                {[1, 2, 3].map((skeleton) => (
+                  <div key={skeleton} className="flex gap-3 animate-pulse">
+                    <div className="h-9 w-9 rounded-full bg-muted" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-1/2 rounded bg-muted" />
+                      <div className="h-3 w-3/4 rounded bg-muted" />
+                      <div className="h-3 w-1/3 rounded bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-center">
                 <Bell className="h-8 w-8 text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground">No notifications</p>
@@ -165,7 +144,7 @@ const NotificationsDropdown = ({
                     key={item.id}
                     className={cn(
                       "flex w-full gap-3 px-4 py-3 text-left transition-colors",
-                      item.unread ? "bg-terracotta/5 hover:bg-terracotta/10" : "hover:bg-muted"
+                      !item.read_at ? "bg-terracotta/5 hover:bg-terracotta/10" : "hover:bg-muted"
                     )}
                     onClick={() => markAsRead(item.id)}
                   >
@@ -182,7 +161,9 @@ const NotificationsDropdown = ({
                       )}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock3 className="h-3.5 w-3.5" />
-                        <span>{formatDistanceToNow(item.timestamp, { addSuffix: true })}</span>
+                        <span>
+                          {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -197,7 +178,7 @@ const NotificationsDropdown = ({
             <Link to="/messages">Open inbox</Link>
           </Button>
           <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground">
-            <Link to="/profile">Notification settings</Link>
+            <Link to="/settings/notifications">Notification settings</Link>
           </Button>
         </div>
       </PopoverContent>
