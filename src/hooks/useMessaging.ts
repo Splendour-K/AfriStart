@@ -130,6 +130,8 @@ export function useConversations() {
     },
     enabled: !!user,
     refetchInterval: 30000, // Refetch every 30 seconds
+    retry: 2,
+    retryDelay: 1000,
   });
 }
 
@@ -290,5 +292,7 @@ export function useUnreadCount() {
     },
     enabled: !!user,
     refetchInterval: 10000, // Check every 10 seconds
+    retry: 2,
+    retryDelay: 1000,
   });
 }

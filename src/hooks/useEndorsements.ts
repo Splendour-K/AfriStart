@@ -73,6 +73,8 @@ export function useEndorsements(userId: string | undefined) {
       return Array.from(skillMap.values()).sort((a, b) => b.count - a.count);
     },
     enabled: !!userId,
+    retry: 2,
+    retryDelay: 1000,
   });
 }
 
@@ -155,5 +157,7 @@ export function useMyEndorsementStats() {
       };
     },
     enabled: !!user,
+    retry: 2,
+    retryDelay: 1000,
   });
 }

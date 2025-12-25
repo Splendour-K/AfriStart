@@ -56,6 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     
+    // Add a maximum loading timeout (5 seconds)
+    const loadingTimeout = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn('Auth loading timeout - forcing completion');
+        setIsLoading(false);
+      }
+    }, 5000);
+    
     const initAuth = async () => {
       try {
         // Get initial session
@@ -81,7 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
         
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       } catch (err) {
         console.error('Auth init error:', err);
         if (mounted) {
@@ -110,11 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
       }
 
-      setIsLoading(false);
+      if (mounted) {
+        setIsLoading(false);
+      }
     });
 
     return () => {
       mounted = false;
+      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
