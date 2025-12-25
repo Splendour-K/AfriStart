@@ -8,7 +8,8 @@ import {
   useGoals, 
   useDashboardStats,
   useCreateGoal,
-  useUpdateGoal
+  useUpdateGoal,
+  useSendConnectionRequest
 } from "@/hooks/useMatching";
 import { 
   Users, 
@@ -33,6 +34,7 @@ const Dashboard = () => {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const createGoal = useCreateGoal();
   const updateGoal = useUpdateGoal();
+  const sendConnection = useSendConnectionRequest();
   const { toast } = useToast();
   
   const [showAddGoal, setShowAddGoal] = useState(false);
@@ -66,6 +68,22 @@ const Dashboard = () => {
       toast({
         title: "Error",
         description: "Failed to update goal.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConnect = async (matchId: string) => {
+    try {
+      await sendConnection.mutateAsync(matchId);
+      toast({
+        title: "Connection request sent",
+        description: "We'll let you know when they respond.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Could not send request",
+        description: error?.message || "Please try again.",
         variant: "destructive",
       });
     }
@@ -177,8 +195,18 @@ const Dashboard = () => {
                     <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-forest/10 text-forest">
                       {match.matchScore}% match
                     </span>
-                    <Button size="sm" variant="outline" className="text-xs">
-                      <UserPlus className="w-3 h-3 mr-1" />
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs"
+                      onClick={() => handleConnect(match.id)}
+                      disabled={sendConnection.isPending}
+                    >
+                      {sendConnection.isPending ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <UserPlus className="w-3 h-3 mr-1" />
+                      )}
                       Connect
                     </Button>
                   </div>

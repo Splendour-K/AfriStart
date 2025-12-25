@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useUnreadCount } from "@/hooks/useMessaging";
@@ -30,6 +30,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children, title, subtitle, headerActions }: DashboardLayoutProps) => {
   const { profile, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: unreadCount } = useUnreadCount();
 
@@ -116,8 +117,13 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
             <span className="font-display font-bold text-lg text-foreground">AfriStart</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/messages')} className="relative">
               <Bell className="w-5 h-5" />
+              {unreadCount && unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold bg-terracotta text-primary-foreground rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Button>
             <Button 
               variant="ghost" 
@@ -193,9 +199,19 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
                   className="pl-10 bg-background"
                 />
               </div>
-              <Button variant="ghost" size="icon" className="relative hidden lg:flex">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative hidden lg:flex"
+                onClick={() => navigate('/messages')}
+                aria-label="Notifications"
+              >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-terracotta rounded-full" />
+                {unreadCount && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold bg-terracotta text-primary-foreground rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Button>
             </div>
           </div>

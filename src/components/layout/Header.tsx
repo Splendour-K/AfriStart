@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -45,12 +48,31 @@ const Header = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" asChild>
-              <Link to="/login">Log In</Link>
-            </Button>
-            <Button variant="hero" asChild>
-              <Link to="/signup">Get Started</Link>
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await signOut();
+                    navigate("/");
+                  }}
+                >
+                  {profile?.full_name ? `Sign out (${profile.full_name.split(" ")[0]})` : "Sign out"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link to="/login">Log In</Link>
+                </Button>
+                <Button variant="hero" asChild>
+                  <Link to="/signup">Get Started</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -82,12 +104,33 @@ const Header = () => {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
-                <Button variant="outline" asChild className="w-full">
-                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>Log In</Link>
-                </Button>
-                <Button variant="hero" asChild className="w-full">
-                  <Link to="/signup" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
-                </Button>
+                {user ? (
+                  <>
+                    <Button asChild className="w-full" variant="outline">
+                      <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+                    </Button>
+                    <Button
+                      className="w-full"
+                      variant="secondary"
+                      onClick={async () => {
+                        await signOut();
+                        setIsMenuOpen(false);
+                        navigate("/");
+                      }}
+                    >
+                      Sign out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" asChild className="w-full">
+                      <Link to="/login" onClick={() => setIsMenuOpen(false)}>Log In</Link>
+                    </Button>
+                    <Button variant="hero" asChild className="w-full">
+                      <Link to="/signup" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>
