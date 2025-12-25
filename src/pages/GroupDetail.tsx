@@ -11,12 +11,16 @@ import {
   useApproveMembership,
   useCommentOnIdea,
   useCreateGroupIdea,
+  useDeleteComment,
+  useDeleteIdea,
   useGroup,
   useGroupIdeaComments,
   useGroupIdeas,
   useGroupMembers,
   useJoinIdea,
+  useLeaveIdea,
   useRequestGroupMembership,
+  useUnvoteIdea,
   useVoteIdea,
 } from "@/hooks/useGroups";
 import { Loader2, MessageCircle, ThumbsUp, Users, UserPlus, CheckCircle2 } from "lucide-react";
@@ -35,8 +39,12 @@ export default function GroupDetail() {
   const approveMembership = useApproveMembership();
   const createIdea = useCreateGroupIdea();
   const voteIdea = useVoteIdea();
+  const unvoteIdea = useUnvoteIdea();
   const joinIdea = useJoinIdea();
+  const leaveIdea = useLeaveIdea();
   const commentIdea = useCommentOnIdea();
+  const deleteComment = useDeleteComment();
+  const deleteIdea = useDeleteIdea();
 
   const [ideaForm, setIdeaForm] = useState({ title: "", description: "", stage: "idea" });
   const [commentText, setCommentText] = useState<{ [ideaId: string]: string }>({});
@@ -90,12 +98,30 @@ export default function GroupDetail() {
     }
   };
 
+  const handleUnvote = async (ideaId: string) => {
+    try {
+      await unvoteIdea.mutateAsync({ ideaId });
+      toast({ title: "Vote removed" });
+    } catch (error: any) {
+      toast({ title: "Unable to remove vote", description: error.message, variant: "destructive" });
+    }
+  };
+
   const handleJoinIdea = async (ideaId: string) => {
     try {
       await joinIdea.mutateAsync({ ideaId });
       toast({ title: "Joined idea", description: "You can collaborate with the team." });
     } catch (error: any) {
       toast({ title: "Unable to join", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleLeaveIdea = async (ideaId: string) => {
+    try {
+      await leaveIdea.mutateAsync({ ideaId });
+      toast({ title: "Left workspace" });
+    } catch (error: any) {
+      toast({ title: "Unable to leave", description: error.message, variant: "destructive" });
     }
   };
 
@@ -107,6 +133,25 @@ export default function GroupDetail() {
       setCommentText((prev) => ({ ...prev, [ideaId]: "" }));
     } catch (error: any) {
       toast({ title: "Unable to comment", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string, ideaId: string) => {
+    try {
+      await deleteComment.mutateAsync({ commentId, ideaId });
+      toast({ title: "Comment deleted" });
+    } catch (error: any) {
+      toast({ title: "Unable to delete comment", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteIdea = async (ideaId: string) => {
+    if (!groupId) return;
+    try {
+      await deleteIdea.mutateAsync({ ideaId, groupId });
+      toast({ title: "Idea deleted" });
+    } catch (error: any) {
+      toast({ title: "Unable to delete idea", description: error.message, variant: "destructive" });
     }
   };
 
@@ -205,17 +250,44 @@ export default function GroupDetail() {
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{idea.description}</p>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleVote(idea.id)}>
-                            <ThumbsUp className="w-4 h-4 mr-1" /> {idea.has_voted ? "Voted" : "Vote"}
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleJoinIdea(idea.id)}>
-                            <UserPlus className="w-4 h-4 mr-1" /> {idea.is_member ? "In workspace" : "Join idea"}
-                          </Button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {idea.has_voted ? (
+                            <Button variant="outline" size="sm" onClick={() => handleUnvote(idea.id)}>
+                              <ThumbsUp className="w-4 h-4 mr-1" /> Unvote
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleVote(idea.id)}>
+                              <ThumbsUp className="w-4 h-4 mr-1" /> Vote
+                            </Button>
+                          )}
+
+                          {idea.is_member ? (
+                            <Button variant="outline" size="sm" onClick={() => handleLeaveIdea(idea.id)}>
+                              <UserPlus className="w-4 h-4 mr-1" /> Leave idea
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleJoinIdea(idea.id)}>
+                              <UserPlus className="w-4 h-4 mr-1" /> Join idea
+                            </Button>
+                          )}
+
                           <Badge variant="outline">{idea.comments_count || 0} comments</Badge>
+
+                          {(idea.author_id === user?.id || isOwner) && (
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteIdea(idea.id)}>
+                              Delete idea
+                            </Button>
+                          )}
                         </div>
 
-                        <CommentsSection ideaId={idea.id} commentText={commentText} setCommentText={setCommentText} onSubmit={handleComment} />
+                        <CommentsSection
+                          ideaId={idea.id}
+                          currentUserId={user?.id || null}
+                          commentText={commentText}
+                          setCommentText={setCommentText}
+                          onSubmit={handleComment}
+                          onDelete={handleDeleteComment}
+                        />
                       </CardContent>
                     </Card>
                   ))
@@ -300,12 +372,14 @@ export default function GroupDetail() {
 
 interface CommentsSectionProps {
   ideaId: string;
+  currentUserId: string | null;
   commentText: Record<string, string>;
   setCommentText: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onSubmit: (ideaId: string) => void;
+  onDelete: (commentId: string, ideaId: string) => void;
 }
 
-function CommentsSection({ ideaId, commentText, setCommentText, onSubmit }: CommentsSectionProps) {
+function CommentsSection({ ideaId, currentUserId, commentText, setCommentText, onSubmit, onDelete }: CommentsSectionProps) {
   const { data: comments, isLoading } = useGroupIdeaComments(ideaId);
 
   return (
@@ -318,9 +392,16 @@ function CommentsSection({ ideaId, commentText, setCommentText, onSubmit }: Comm
       ) : comments && comments.length > 0 ? (
         <div className="space-y-2">
           {comments.map((c) => (
-            <div key={c.id} className="text-sm">
-              <span className="font-semibold">{c.user?.full_name || "User"}</span>{" "}
-              <span className="text-muted-foreground">{c.content}</span>
+            <div key={c.id} className="text-sm flex items-start justify-between gap-2">
+              <div>
+                <span className="font-semibold">{c.user?.full_name || "User"}</span>{" "}
+                <span className="text-muted-foreground">{c.content}</span>
+              </div>
+              {currentUserId === c.user_id && (
+                <Button variant="ghost" size="sm" onClick={() => onDelete(c.id, ideaId)}>
+                  Delete
+                </Button>
+              )}
             </div>
           ))}
         </div>

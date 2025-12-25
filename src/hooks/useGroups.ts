@@ -124,7 +124,7 @@ export function useGroupIdeas(groupId: string | null) {
       const { data, error } = await supabase
         .from("group_ideas")
         .select(
-          `*, author:profiles(id, full_name), votes:group_idea_votes(count), comments:group_idea_comments(count), idea_members:group_idea_members(user_id)`
+          `*, author:profiles(id, full_name), votes:group_idea_votes(user_id), comments:group_idea_comments(count), idea_members:group_idea_members(user_id)`
         )
         .eq("group_id", groupId)
         .order("created_at", { ascending: false });
@@ -136,7 +136,7 @@ export function useGroupIdeas(groupId: string | null) {
 
       return (data || []).map((idea: any) => ({
         ...idea,
-        votes: idea.votes?.[0]?.count ?? 0,
+        votes: idea.votes?.length ?? 0,
         comments_count: idea.comments?.[0]?.count ?? 0,
         has_voted: !!idea.votes?.find((v: any) => v.user_id === user?.id),
         is_member: !!idea.idea_members?.find((m: any) => m.user_id === user?.id),
@@ -268,6 +268,25 @@ export function useVoteIdea() {
   });
 }
 
+export function useUnvoteIdea() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ideaId }: { ideaId: string }) => {
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase
+        .from("group_idea_votes")
+        .delete()
+        .eq("idea_id", ideaId)
+        .eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["group-ideas"] });
+    },
+  });
+}
+
 export function useJoinIdea() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -277,6 +296,25 @@ export function useJoinIdea() {
       const { error } = await supabase
         .from("group_idea_members")
         .upsert({ idea_id: ideaId, user_id: user.id, role: "collaborator" }, { onConflict: "idea_id,user_id" });
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["group-ideas"] });
+    },
+  });
+}
+
+export function useLeaveIdea() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ideaId }: { ideaId: string }) => {
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase
+        .from("group_idea_members")
+        .delete()
+        .eq("idea_id", ideaId)
+        .eq("user_id", user.id);
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
@@ -299,6 +337,44 @@ export function useCommentOnIdea() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["group-idea-comments", vars.ideaId] });
       queryClient.invalidateQueries({ queryKey: ["group-ideas"] });
+    },
+  });
+}
+
+export function useDeleteComment() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ commentId, ideaId }: { commentId: string; ideaId: string }) => {
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase
+        .from("group_idea_comments")
+        .delete()
+        .eq("id", commentId)
+        .eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["group-idea-comments", vars.ideaId] });
+      queryClient.invalidateQueries({ queryKey: ["group-ideas"] });
+    },
+  });
+}
+
+export function useDeleteIdea() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ideaId, groupId }: { ideaId: string; groupId: string }) => {
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase
+        .from("group_ideas")
+        .delete()
+        .eq("id", ideaId);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["group-ideas", vars.groupId] });
     },
   });
 }
