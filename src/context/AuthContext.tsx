@@ -23,25 +23,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user profile from profiles table
+  // Fetch user profile from profiles table with a small timeout to avoid blocking UI
   const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+    const fetchPromise = (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-      if (error) {
+        if (error) {
+          console.error('Error fetching profile:', error);
+          return null;
+        }
+
+        return data as Profile | null;
+      } catch (error) {
         console.error('Error fetching profile:', error);
         return null;
       }
+    })();
 
-      return data as Profile | null;
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      return null;
-    }
+    // Time out after 3s to prevent long blocking fetch
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => {
+        console.warn('Profile fetch timeout - continuing without profile');
+        resolve(null);
+      }, 3000);
+    });
+
+    return Promise.race([fetchPromise, timeoutPromise]);
   };
 
   // Refresh profile data
@@ -81,16 +93,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setSession(session);
         setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(profileData);
-          }
-        }
-        
+
+        // Mark loading complete immediately; profile will hydrate in background
         if (mounted) {
           setIsLoading(false);
+        }
+
+        if (session?.user) {
+          fetchProfile(session.user.id).then((profileData) => {
+            if (mounted) {
+              setProfile(profileData);
+            }
+          });
         }
       } catch (err) {
         console.error('Auth init error:', err);
@@ -110,18 +124,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setSession(session);
       setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const profileData = await fetchProfile(session.user.id);
-        if (mounted) {
-          setProfile(profileData);
-        }
-      } else {
-        setProfile(null);
-      }
 
+      // Loading should not block on profile fetch
       if (mounted) {
         setIsLoading(false);
+      }
+
+      if (session?.user) {
+        fetchProfile(session.user.id).then((profileData) => {
+          if (mounted) {
+            setProfile(profileData);
+          }
+        });
+      } else {
+        setProfile(null);
       }
     });
 
