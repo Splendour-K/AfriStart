@@ -88,9 +88,13 @@ const Signup = () => {
     );
 
     if (error) {
+      const message = error.message || "Signups are not available right now.";
+      const isDisabled = message.toLowerCase().includes("signups not allowed");
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description: isDisabled
+          ? "New signups are disabled for this project. Please enable signups in Supabase Auth settings or create the account via the dashboard."
+          : message,
         variant: "destructive",
       });
       setIsLoading(false);
