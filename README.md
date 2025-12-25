@@ -1,73 +1,158 @@
-# Welcome to your Lovable project
+# AfriStart - Connect. Collaborate. Build Africa's Future.
 
-## Project info
+AfriStart is a web application that helps African university students find co-founders, build accountability, and access practical resources to transform their startup ideas into successful businesses.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Features
 
-## How can I edit this code?
+- **User Authentication**: Secure signup/login with Supabase (email/password + Google OAuth)
+- **Profile Management**: Complete profile with skills, interests, and social links
+- **Co-founder Discovery**: Smart matching algorithm based on skills, interests, and goals
+- **Real-time Messaging**: Chat with your connections using Supabase Realtime
+- **Skill Endorsements**: Get endorsed by connections for your skills (LinkedIn-style)
+- **Startup Ideas**: Share and discover startup ideas from the community
+- **Dashboard**: Track your connections, matches, and startup progress
+- **Onboarding Flow**: Guided setup for new users
 
-There are several ways of editing your application.
+## 🛠️ Tech Stack
 
-**Use Lovable**
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: TailwindCSS + shadcn/ui components
+- **Backend**: Supabase (Authentication + PostgreSQL Database)
+- **State Management**: React Query + Context API
+- **Routing**: React Router DOM
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 📋 Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- Node.js 18+ and npm
+- A Supabase account (free tier works!)
 
-**Use your preferred IDE**
+## 🔧 Setup Instructions
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 1. Clone and Install Dependencies
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+git clone <your-repo-url>
+cd AfriStart
+npm install
+```
 
-Follow these steps:
+### 2. Set Up Supabase
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to **SQL Editor** and run the schema from `supabase/schema.sql`
+3. Go to **Settings > API** to get your project URL and anon key
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 3. Configure Environment Variables
 
-# Step 3: Install the necessary dependencies.
-npm i
+Create a `.env` file in the root directory:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 4. Enable Google OAuth (Optional)
+
+1. Go to **Authentication > Providers** in Supabase
+2. Enable Google provider
+3. Add your Google OAuth credentials
+
+### 5. Run the Development Server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Visit `http://localhost:5173` to see the app!
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📁 Project Structure
 
-**Use GitHub Codespaces**
+```
+src/
+├── components/
+│   ├── home/          # Landing page components
+│   ├── layout/        # Header, Footer
+│   ├── ui/            # shadcn/ui components
+│   └── ProtectedRoute.tsx
+├── context/
+│   └── AuthContext.tsx  # Authentication state management
+├── hooks/             # Custom React hooks
+├── lib/
+│   ├── supabase.ts    # Supabase client + types
+│   └── utils.ts       # Utility functions
+├── pages/
+│   ├── Index.tsx      # Landing page
+│   ├── Login.tsx      # Login page
+│   ├── Signup.tsx     # Registration page
+│   ├── Onboarding.tsx # Profile setup wizard
+│   ├── Dashboard.tsx  # Main dashboard
+│   ├── Discover.tsx   # Find co-founders
+│   ├── Profile.tsx    # User profile management
+│   ├── ForgotPassword.tsx
+│   └── ResetPassword.tsx
+└── App.tsx            # Main app with routing
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🗃️ Database Schema
 
-## What technologies are used for this project?
+The Supabase database includes:
 
-This project is built with:
+- **profiles**: User profiles with skills, interests, university
+- **connections**: Co-founder connection requests
+- **startup_ideas**: User startup ideas and projects
+- **messages**: Direct messaging between users
+- **goals**: Accountability goals and milestones
+- **resources**: Shared startup resources
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🔐 Security
 
-## How can I deploy this project?
+- Row Level Security (RLS) enabled on all tables
+- Users can only access/modify their own data
+- Profiles are publicly viewable for discovery
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 📝 Available Scripts
 
-## Can I connect a custom domain to my Lovable project?
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run preview  # Preview production build
+npm run lint     # Run ESLint
+```
 
-Yes, you can!
+## 🚀 Deployment (Vercel)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Option 1: One-click Deploy
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Splendour-K/AfriStart)
+
+### Option 2: Manual Deploy
+
+1. Push your code to GitHub
+2. Go to [Vercel](https://vercel.com) and import your repository
+3. Add environment variables:
+   - `VITE_SUPABASE_URL`: Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon/public key
+4. Deploy!
+
+### Environment Variables for Production
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_SUPABASE_URL` | Your Supabase project URL (e.g., `https://xxx.supabase.co`) |
+| `VITE_SUPABASE_ANON_KEY` | Your Supabase anonymous/public key |
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+Built with ❤️ for African student entrepreneurs

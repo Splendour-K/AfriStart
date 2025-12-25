@@ -25,9 +25,9 @@ const Footer = () => {
   };
 
   const socialLinks = [
-    { icon: Twitter, href: "https://twitter.com/splennet", label: "Twitter" },
-    { icon: Linkedin, href: "https://linkedin.com/company/splennet", label: "LinkedIn" },
-    { icon: Instagram, href: "https://instagram.com/splennet", label: "Instagram" },
+    { icon: Twitter, href: "https://twitter.com/afristart", label: "Twitter" },
+    { icon: Linkedin, href: "https://linkedin.com/company/afristart", label: "LinkedIn" },
+    { icon: Instagram, href: "https://instagram.com/afristart", label: "Instagram" },
   ];
 
   return (
@@ -38,9 +38,9 @@ const Footer = () => {
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-6">
               <div className="w-10 h-10 rounded-xl bg-gradient-warm flex items-center justify-center">
-                <span className="text-primary-foreground font-display font-bold text-xl">S</span>
+                <span className="text-primary-foreground font-display font-bold text-xl">A</span>
               </div>
-              <span className="font-display font-bold text-xl text-cream">Splennet</span>
+              <span className="font-display font-bold text-xl text-cream">AfriStart</span>
             </Link>
             <p className="text-cream/70 max-w-xs mb-6 leading-relaxed">
               Empowering African university students to connect, collaborate, and build the future of innovation together.

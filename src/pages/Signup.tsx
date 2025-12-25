@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, ArrowRight } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { Eye, EyeOff, Mail, Lock, User, GraduationCap, ArrowRight, Loader2 } from "lucide-react";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +18,19 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { signUp, user, profile } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (profile && !profile.is_onboarded) {
+        navigate("/onboarding");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [user, profile, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -38,17 +51,40 @@ const Signup = () => {
       return;
     }
 
+    if (formData.password.length < 8) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    // Placeholder for actual registration
-    setTimeout(() => {
+    const { error } = await signUp(
+      formData.email,
+      formData.password,
+      formData.fullName,
+      formData.university
+    );
+
+    if (error) {
       toast({
-        title: "Welcome to Splennet!",
-        description: "Your account has been created. Let's set up your profile!",
+        title: "Sign up failed",
+        description: error.message,
+        variant: "destructive",
       });
       setIsLoading(false);
-      navigate("/onboarding");
-    }, 1500);
+      return;
+    }
+
+    toast({
+      title: "Welcome to AfriStart!",
+      description: "Your account has been created. Please check your email to verify your account, then complete your profile!",
+    });
+    setIsLoading(false);
+    navigate("/onboarding");
   };
 
   return (
@@ -92,9 +128,9 @@ const Signup = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 mb-8">
             <div className="w-10 h-10 rounded-xl bg-gradient-warm flex items-center justify-center shadow-warm">
-              <span className="text-primary-foreground font-display font-bold text-xl">S</span>
+              <span className="text-primary-foreground font-display font-bold text-xl">A</span>
             </div>
-            <span className="font-display font-bold text-xl text-foreground">Splennet</span>
+            <span className="font-display font-bold text-xl text-foreground">AfriStart</span>
           </Link>
 
           {/* Header */}
@@ -174,6 +210,7 @@ const Signup = () => {
                   className="pl-10 pr-10"
                   required
                   minLength={8}
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
@@ -198,13 +235,23 @@ const Signup = () => {
                   onChange={handleChange}
                   className="pl-10"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
 
             <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create Account"}
-              <ArrowRight className="ml-2 w-5 h-5" />
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 w-5 h-5 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  Create Account
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </>
+              )}
             </Button>
           </form>
 

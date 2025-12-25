@@ -23,9 +23,9 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-warm flex items-center justify-center shadow-warm group-hover:shadow-elevated transition-shadow">
-              <span className="text-primary-foreground font-display font-bold text-xl">S</span>
+              <span className="text-primary-foreground font-display font-bold text-xl">A</span>
             </div>
-            <span className="font-display font-bold text-xl text-foreground">Splennet</span>
+            <span className="font-display font-bold text-xl text-foreground">AfriStart</span>
           </Link>
 
           {/* Desktop Navigation */}
