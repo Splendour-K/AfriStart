@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import {
   Bell,
@@ -49,7 +49,8 @@ const NotificationsDropdown = ({
   buttonSize = "icon",
   className,
 }: NotificationsDropdownProps) => {
-  const { data: notifications = placeholderNotifications, isLoading } = useNotifications();
+  const navigate = useNavigate();
+  const { data: notifications = [], isLoading } = useNotifications();
   useRealtimeNotifications();
   const { mutate: markNotificationRead } = useMarkNotificationRead();
   const { mutate: markAllNotificationsRead, isPending: isMarkingAll } = useMarkAllNotificationsRead();
@@ -58,6 +59,19 @@ const NotificationsDropdown = ({
 
   const markAsRead = (id: string) => {
     markNotificationRead(id);
+  };
+
+  const handleNotificationClick = (item: NotificationItem) => {
+    markAsRead(item.id);
+
+    if (item.href) {
+      const isExternal = /^https?:\/\//i.test(item.href);
+      if (isExternal) {
+        window.open(item.href, "_blank", "noreferrer");
+      } else {
+        navigate(item.href);
+      }
+    }
   };
 
   const markAllAsRead = () => {
@@ -148,7 +162,7 @@ const NotificationsDropdown = ({
                       "flex w-full gap-3 px-4 py-3 text-left transition-colors",
                       !item.read_at ? "bg-terracotta/5 hover:bg-terracotta/10" : "hover:bg-muted"
                     )}
-                    onClick={() => markAsRead(item.id)}
+                    onClick={() => handleNotificationClick(item)}
                   >
                     {renderIcon(item.category)}
                     <div className="flex-1 space-y-1">

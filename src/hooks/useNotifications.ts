@@ -37,41 +37,6 @@ const mapNotificationRow = (row: any): NotificationItem => ({
   href: row.href ?? row.link ?? null,
 });
 
-export const placeholderNotifications: NotificationItem[] = [
-  {
-    id: "placeholder-1",
-    title: "You have 3 new collaboration requests",
-    description: "Review join requests for Fintech Builders",
-    created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    category: "group",
-    read_at: null,
-  },
-  {
-    id: "placeholder-2",
-    title: "Ada left a comment on your idea",
-    description: '"Can we expand to SMEs in Lagos first?"',
-    created_at: new Date(Date.now() - 1000 * 60 * 55).toISOString(),
-    category: "idea",
-    read_at: null,
-  },
-  {
-    id: "placeholder-3",
-    title: "New message from Tunde",
-    description: "Let's align on the pitch deck this weekend.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-    category: "message",
-    read_at: new Date(Date.now() - 1000 * 60 * 60 * 3.5).toISOString(),
-  },
-  {
-    id: "placeholder-4",
-    title: "Platform update",
-    description: "Voting is live in your groups. Cast your votes to prioritize ideas.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
-    category: "system",
-    read_at: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(),
-  },
-];
-
 const defaultPreferences: NotificationPreferences = {
   email: true,
   push: true,
@@ -100,12 +65,11 @@ export function useNotifications() {
         .limit(50);
 
       if (error) {
-        console.warn("Notifications fallback due to error:", error.message);
-        // Fallback gracefully to placeholders so UI still works without table present
-        return placeholderNotifications;
+        console.warn("Notifications fetch error:", error.message);
+        return [];
       }
 
-      if (!data) return placeholderNotifications;
+      if (!data) return [];
 
       return data.map(mapNotificationRow);
     },
