@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   Lightbulb,
-  Target
+  Target,
+  Shield
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -28,7 +29,7 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout = ({ children, title, subtitle, headerActions }: DashboardLayoutProps) => {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, isAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -43,6 +44,9 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
     { id: "messages", label: "Messages", icon: MessageSquare, path: "/messages" },
     { id: "resources", label: "Resources", icon: BookOpen, path: "/resources" },
     { id: "profile", label: "Profile", icon: Settings, path: "/profile" },
+    ...(isAdmin
+      ? [{ id: "admin", label: "Admin", icon: Shield, path: "/admin/messages" }]
+      : []),
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -96,7 +100,10 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{profile?.full_name || 'User'}</p>
+              <p className="text-sm font-medium text-foreground truncate flex items-center gap-2">
+                {profile?.full_name || 'User'}
+                {isAdmin && <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Admin</span>}
+              </p>
               <p className="text-xs text-muted-foreground truncate">{profile?.university || 'University'}</p>
             </div>
           </div>
