@@ -203,14 +203,17 @@ const Discover = () => {
                     <Heart className="w-3 h-3 text-terracotta" />
                     Shared Interests
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {match.sharedInterests.slice(0, 3).map((interest) => (
-                      <Badge key={interest} className="text-xs bg-terracotta/10 text-terracotta border-terracotta/20">
+                      <Badge
+                        key={interest}
+                        className="text-xs sm:text-[13px] px-2.5 py-1 bg-terracotta/10 text-terracotta border-terracotta/20"
+                      >
                         {interest}
                       </Badge>
                     ))}
                     {match.sharedInterests.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs sm:text-[13px] px-2.5 py-1">
                         +{match.sharedInterests.length - 3}
                       </Badge>
                     )}
@@ -225,14 +228,18 @@ const Discover = () => {
                     <Briefcase className="w-3 h-3" />
                     Skills They Bring
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {match.complementarySkills.slice(0, 3).map((skill) => (
-                      <Badge key={skill} variant="outline" className="text-xs">
+                      <Badge
+                        key={skill}
+                        variant="outline"
+                        className="text-xs sm:text-[13px] px-2.5 py-1"
+                      >
                         {skill}
                       </Badge>
                     ))}
                     {match.complementarySkills.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs sm:text-[13px] px-2.5 py-1">
                         +{match.complementarySkills.length - 3}
                       </Badge>
                     )}

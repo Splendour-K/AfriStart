@@ -46,7 +46,7 @@ const CTASection = () => {
               variant="outline" 
               size="xl" 
               asChild
-              className="border-cream/30 text-cream hover:bg-cream/10"
+              className="bg-white/90 text-forest hover:bg-white border-white/80"
             >
               <Link to="/contact">
                 Talk to Us
