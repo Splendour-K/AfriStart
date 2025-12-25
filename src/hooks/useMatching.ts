@@ -199,6 +199,22 @@ export function useSendConnectionRequest() {
     mutationFn: async (receiverId: string) => {
       if (!user) throw new Error('Not authenticated');
 
+      // Rate limit: max 20 proposals (connection requests) per user per 7-day window
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const { count: recentCount, error: countError } = await supabase
+        .from('connections')
+        .select('*', { count: 'exact', head: true })
+        .eq('requester_id', user.id)
+        .gte('created_at', oneWeekAgo.toISOString());
+
+      if (countError) throw countError;
+
+      if ((recentCount ?? 0) >= 20) {
+        throw new Error('You have reached your weekly limit of 20 proposals. Make them intentional and try again next week.');
+      }
+
       const { data, error } = await supabase
         .from('connections')
         .insert({

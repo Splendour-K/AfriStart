@@ -78,7 +78,7 @@ const Dashboard = () => {
       await sendConnection.mutateAsync(matchId);
       toast({
         title: "Connection request sent",
-        description: "We'll let you know when they respond.",
+        description: "Request set to pending. Share one concise proposal (max 50 words) while you wait.",
       });
     } catch (error: any) {
       toast({
@@ -160,14 +160,17 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-card rounded-2xl border border-border shadow-soft">
-          <div className="p-6 border-b border-border flex items-center justify-between">
+          <div className="p-6 border-b border-border flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-terracotta" />
               <h2 className="font-display text-lg font-semibold text-foreground">
                 Top Co-Founder Matches
               </h2>
             </div>
-            <Link to="/discover" className="text-sm text-primary hover:underline flex items-center gap-1">
+            <p className="text-xs text-muted-foreground max-w-2xl md:max-w-xl">
+              Connection requests stay pending until accepted or rejected. You can send one proposal (up to 50 words) per request and up to 20 proposals each week—make each outreach intentional and focused on your startup idea.
+            </p>
+            <Link to="/discover" className="text-sm text-primary hover:underline flex items-center gap-1 md:self-center">
               View all <ChevronRight className="w-4 h-4" />
             </Link>
           </div>

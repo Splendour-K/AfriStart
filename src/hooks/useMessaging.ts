@@ -28,6 +28,12 @@ export interface Conversation {
   unread_count?: number;
 }
 
+const countWords = (text: string) =>
+  text
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+
 // Get or create a conversation with another user
 export function useGetOrCreateConversation() {
   const { user } = useAuth();
@@ -176,12 +182,72 @@ export function useSendMessage() {
     }) => {
       if (!user) throw new Error("Not authenticated");
 
+      const trimmedContent = content.trim();
+
+      // Fetch conversation participants to determine the other user
+      const { data: conversation, error: conversationError } = await supabase
+        .from("conversations")
+        .select("participant_1, participant_2")
+        .eq("id", conversationId)
+        .single();
+
+      if (conversationError) throw conversationError;
+
+      const otherUserId =
+        conversation.participant_1 === user.id
+          ? conversation.participant_2
+          : conversation.participant_1;
+
+      // Find the latest connection between the two users
+      const { data: connectionData, error: connectionError } = await supabase
+        .from("connections")
+        .select("id, status, requester_id, receiver_id, created_at")
+        .or(
+          `and(requester_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(requester_id.eq.${otherUserId},receiver_id.eq.${user.id})`
+        )
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (connectionError && connectionError.code !== "PGRST116") throw connectionError;
+
+      const connection = connectionData?.[0];
+
+      if (!connection) {
+        throw new Error("You need to send a connection request before messaging this user.");
+      }
+
+      if (connection.status === "rejected") {
+        throw new Error(
+          "Your proposal was rejected. You can’t send more messages unless they accept your connection request."
+        );
+      }
+
+      if (connection.status === "pending") {
+        // Allow only a single proposal message while pending
+        const { count: userMessageCount, error: countError } = await supabase
+          .from("messages")
+          .select("*", { count: "exact", head: true })
+          .eq("conversation_id", conversationId)
+          .eq("sender_id", user.id);
+
+        if (countError) throw countError;
+
+        if ((userMessageCount ?? 0) >= 1) {
+          throw new Error("You can send only one proposal while your connection request is pending.");
+        }
+
+        const wordCount = countWords(trimmedContent);
+        if (wordCount > 50) {
+          throw new Error("Proposals are limited to 50 words. Keep it concise and focused on your startup idea.");
+        }
+      }
+
       const { data, error } = await supabase
         .from("messages")
         .insert({
           conversation_id: conversationId,
           sender_id: user.id,
-          content,
+          content: trimmedContent,
         })
         .select()
         .single();

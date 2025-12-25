@@ -53,7 +53,7 @@ const Discover = () => {
       await sendConnectionRequest.mutateAsync(targetUserId);
       toast({
         title: "Connection request sent!",
-        description: "They will be notified of your request.",
+        description: "Request set to pending. Share one focused proposal (max 50 words) while you wait.",
       });
     } catch (err: any) {
       if (err.message?.includes("duplicate") || err.code === "23505") {
@@ -82,6 +82,9 @@ const Discover = () => {
       title="Discover Co-Founders"
       subtitle="Find your perfect match based on skills and interests"
     >
+      <div className="mb-4 p-4 rounded-xl border border-border bg-muted/50 text-sm text-muted-foreground">
+        Connection requests stay pending until they accept or reject. You can send one proposal per request (max 50 words) and up to 20 proposals each week—make every outreach intentional and centered on a clear startup idea.
+      </div>
       {/* Search and Filters */}
       <div className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">

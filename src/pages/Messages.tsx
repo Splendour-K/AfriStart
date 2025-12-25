@@ -35,6 +35,9 @@ const Messages = () => {
   const { data: messages, isLoading: messagesLoading } = useMessages(selectedConversation?.id || null);
   const sendMessage = useSendMessage();
   const markAsRead = useMarkAsRead();
+  const proposalWordCount = messageInput.trim()
+    ? messageInput.trim().split(/\s+/).filter(Boolean).length
+    : 0;
 
   // Real-time subscription
   useRealtimeMessages(selectedConversation?.id || null);
@@ -64,7 +67,7 @@ const Messages = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to send message.",
+        description: error instanceof Error ? error.message : "Failed to send message.",
         variant: "destructive",
       });
     }
@@ -294,6 +297,19 @@ const Messages = () => {
                         <Send className="w-4 h-4" />
                       )}
                     </Button>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span>
+                      Proposal rule: while a connection request is pending you can send one proposal up to 50 words. If they reject it, you can’t message again unless they accept. You can send proposals to up to 20 students per week, so keep it focused on your startup idea.
+                    </span>
+                    <span
+                      className={cn(
+                        "font-medium",
+                        proposalWordCount > 50 ? "text-destructive" : "text-foreground"
+                      )}
+                    >
+                      {proposalWordCount}/50 words
+                    </span>
                   </div>
                 </form>
               </>
