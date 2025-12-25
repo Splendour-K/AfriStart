@@ -21,6 +21,15 @@ import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import Resources from "./pages/Resources";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Cookies from "./pages/Cookies";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
+import Pricing from "./pages/Pricing";
+import FAQ from "./pages/FAQ";
+import Careers from "./pages/Careers";
+import Blog from "./pages/Blog";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +47,15 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/cookies" element={<Cookies />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/careers" element={<Careers />} />
+            <Route path="/blog" element={<Blog />} />
             
             {/* Protected routes */}
             <Route path="/onboarding" element={
