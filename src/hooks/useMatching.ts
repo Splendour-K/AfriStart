@@ -199,6 +199,45 @@ export function useSendConnectionRequest() {
     mutationFn: async (receiverId: string) => {
       if (!user) throw new Error('Not authenticated');
 
+      // Check for existing connection between the two users
+      const { data: existingConnection, error: existingError } = await supabase
+        .from('connections')
+        .select('*')
+        .or(
+          `and(requester_id.eq.${user.id},receiver_id.eq.${receiverId}),and(requester_id.eq.${receiverId},receiver_id.eq.${user.id})`
+        )
+        .maybeSingle();
+
+      if (existingError && existingError.code !== 'PGRST116') throw existingError;
+
+      if (existingConnection) {
+        if (existingConnection.status === 'accepted') {
+          throw new Error("You're already connected with this user.");
+        }
+
+        if (existingConnection.status === 'pending') {
+          throw new Error('Connection request already pending.');
+        }
+
+        if (existingConnection.status === 'rejected') {
+          // Allow re-request by flipping the existing record back to pending
+          const { data: updated, error: updateError } = await supabase
+            .from('connections')
+            .update({
+              status: 'pending',
+              requester_id: user.id,
+              receiver_id: receiverId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingConnection.id)
+            .select()
+            .single();
+
+          if (updateError) throw updateError;
+          return updated;
+        }
+      }
+
       // Rate limit: max 20 proposals (connection requests) per user per 7-day window
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);

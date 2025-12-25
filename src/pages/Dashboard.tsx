@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -9,7 +9,8 @@ import {
   useDashboardStats,
   useCreateGoal,
   useUpdateGoal,
-  useSendConnectionRequest
+  useSendConnectionRequest,
+  useConnections
 } from "@/hooks/useMatching";
 import { 
   Users, 
@@ -21,7 +22,8 @@ import {
   Loader2,
   UserPlus,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,7 @@ const Dashboard = () => {
   const { data: matches, isLoading: matchesLoading } = useCofounderMatches(5);
   const { data: goals, isLoading: goalsLoading } = useGoals();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: connectionsData } = useConnections();
   const createGoal = useCreateGoal();
   const updateGoal = useUpdateGoal();
   const sendConnection = useSendConnectionRequest();
@@ -39,6 +42,34 @@ const Dashboard = () => {
   
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
+  const [optimisticPending, setOptimisticPending] = useState<Set<string>>(new Set());
+
+  const pendingSentIds = useMemo(
+    () => new Set((connectionsData?.sent || []).map((c: any) => c.receiver_id)),
+    [connectionsData]
+  );
+
+  const pendingIncomingIds = useMemo(
+    () => new Set((connectionsData?.pending || []).map((c: any) => c.requester_id)),
+    [connectionsData]
+  );
+
+  const acceptedIds = useMemo(() => {
+    const set = new Set<string>();
+    (connectionsData?.accepted || []).forEach((c: any) => {
+      const otherId = c.requester_id === profile?.id ? c.receiver_id : c.requester_id;
+      if (otherId) set.add(otherId);
+    });
+    return set;
+  }, [connectionsData, profile?.id]);
+
+  const getConnectionStatus = (targetUserId: string) => {
+    if (acceptedIds.has(targetUserId)) return "accepted" as const;
+    if (pendingSentIds.has(targetUserId) || pendingIncomingIds.has(targetUserId) || optimisticPending.has(targetUserId)) {
+      return "pending" as const;
+    }
+    return "none" as const;
+  };
 
   const handleAddGoal = async () => {
     if (!newGoalTitle.trim()) return;
@@ -74,8 +105,19 @@ const Dashboard = () => {
   };
 
   const handleConnect = async (matchId: string) => {
+    const status = getConnectionStatus(matchId);
+    if (status === "accepted") {
+      toast({ title: "Already connected", description: "You’re already connected with this user." });
+      return;
+    }
+    if (status === "pending") {
+      toast({ title: "Request already pending", description: "Await their response or accept their request." });
+      return;
+    }
+
     try {
       await sendConnection.mutateAsync(matchId);
+      setOptimisticPending((prev) => new Set(prev).add(matchId));
       toast({
         title: "Connection request sent",
         description: "Request set to pending. Share one concise proposal (max 50 words) while you wait.",
@@ -198,20 +240,39 @@ const Dashboard = () => {
                     <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-forest/10 text-forest">
                       {match.matchScore}% match
                     </span>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-xs"
-                      onClick={() => handleConnect(match.id)}
-                      disabled={sendConnection.isPending}
-                    >
-                      {sendConnection.isPending ? (
-                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                      ) : (
-                        <UserPlus className="w-3 h-3 mr-1" />
-                      )}
-                      Connect
-                    </Button>
+                    {(() => {
+                      const status = getConnectionStatus(match.id);
+                      const isPending = status === "pending";
+                      const isAccepted = status === "accepted";
+                      return (
+                        <Button 
+                          size="sm" 
+                          variant={isAccepted ? "secondary" : "outline"} 
+                          className="text-xs"
+                          onClick={() => handleConnect(match.id)}
+                          disabled={isPending || isAccepted || sendConnection.isPending}
+                        >
+                          {isAccepted ? (
+                            <>Connected</>
+                          ) : isPending ? (
+                            <>
+                              <Clock className="w-3 h-3 mr-1" />
+                              Pending
+                            </>
+                          ) : sendConnection.isPending ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              Sending
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-3 h-3 mr-1" />
+                              Connect
+                            </>
+                          )}
+                        </Button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
