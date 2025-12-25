@@ -195,6 +195,145 @@ CREATE TRIGGER update_goals_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Groups feature tables
+CREATE TABLE IF NOT EXISTS groups (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  university TEXT NOT NULL,
+  owner_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TABLE IF NOT EXISTS group_memberships (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  status TEXT CHECK (status IN ('pending','approved','rejected')) DEFAULT 'pending',
+  role TEXT CHECK (role IN ('owner','member','moderator')) DEFAULT 'member',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  UNIQUE(group_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS group_ideas (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
+  author_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  stage TEXT CHECK (stage IN ('idea','validation','mvp','growth')) DEFAULT 'idea',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TABLE IF NOT EXISTS group_idea_votes (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  idea_id UUID REFERENCES group_ideas(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  UNIQUE(idea_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS group_idea_comments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  idea_id UUID REFERENCES group_ideas(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TABLE IF NOT EXISTS group_idea_members (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  idea_id UUID REFERENCES group_ideas(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  role TEXT CHECK (role IN ('collaborator','lead','owner')) DEFAULT 'collaborator',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  UNIQUE(idea_id, user_id)
+);
+
+ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_memberships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_ideas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_idea_votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_idea_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_idea_members ENABLE ROW LEVEL SECURITY;
+
+-- Groups policies (visibility open; write restricted)
+CREATE POLICY "Groups are viewable by everyone" ON groups
+  FOR SELECT USING (true);
+
+CREATE POLICY "Owners can insert groups" ON groups
+  FOR INSERT WITH CHECK (auth.uid() = owner_id);
+
+CREATE POLICY "Owners can update their groups" ON groups
+  FOR UPDATE USING (auth.uid() = owner_id);
+
+-- Membership policies
+CREATE POLICY "Memberships viewable to group members and owner" ON group_memberships
+  FOR SELECT USING (auth.uid() = user_id OR auth.uid() = (SELECT owner_id FROM groups WHERE groups.id = group_memberships.group_id));
+
+CREATE POLICY "Users can request membership" ON group_memberships
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Owner can update membership" ON group_memberships
+  FOR UPDATE USING (auth.uid() = (SELECT owner_id FROM groups WHERE groups.id = group_memberships.group_id));
+
+-- Group ideas policies
+CREATE POLICY "Ideas viewable by everyone" ON group_ideas
+  FOR SELECT USING (true);
+
+CREATE POLICY "Group members can insert ideas" ON group_ideas
+  FOR INSERT WITH CHECK (
+    auth.uid() = author_id AND EXISTS (
+      SELECT 1 FROM group_memberships gm
+      WHERE gm.group_id = group_id AND gm.user_id = auth.uid() AND gm.status = 'approved'
+    )
+  );
+
+CREATE POLICY "Authors can update their ideas" ON group_ideas
+  FOR UPDATE USING (auth.uid() = author_id);
+
+-- Votes
+CREATE POLICY "Votes readable by group members" ON group_idea_votes
+  FOR SELECT USING (true);
+
+CREATE POLICY "Group members can vote" ON group_idea_votes
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM group_memberships gm
+      JOIN group_ideas gi ON gi.id = idea_id
+      WHERE gm.group_id = gi.group_id AND gm.user_id = auth.uid() AND gm.status = 'approved'
+    )
+  );
+
+-- Comments
+CREATE POLICY "Comments readable" ON group_idea_comments
+  FOR SELECT USING (true);
+
+CREATE POLICY "Group members can comment" ON group_idea_comments
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM group_memberships gm
+      JOIN group_ideas gi ON gi.id = idea_id
+      WHERE gm.group_id = gi.group_id AND gm.user_id = auth.uid() AND gm.status = 'approved'
+    )
+  );
+
+-- Idea collaborators
+CREATE POLICY "Idea collaborators readable" ON group_idea_members
+  FOR SELECT USING (true);
+
+CREATE POLICY "Group members can join idea" ON group_idea_members
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM group_memberships gm
+      JOIN group_ideas gi ON gi.id = idea_id
+      WHERE gm.group_id = gi.group_id AND gm.user_id = auth.uid() AND gm.status = 'approved'
+    )
+  );
+
 -- Function to handle new user creation (auto-create profile)
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$

@@ -32,6 +32,9 @@ import Careers from "./pages/Careers";
 import Blog from "./pages/Blog";
 import AdminMessages from "./pages/AdminMessages";
 import { AdminRoute } from "@/components/ProtectedRoute";
+import Groups from "./pages/Groups";
+import GroupDetail from "./pages/GroupDetail";
+import AdminGroups from "./pages/AdminGroups";
 
 const queryClient = new QueryClient();
 
@@ -58,9 +61,24 @@ const App = () => (
             <Route path="/faq" element={<FAQ />} />
             <Route path="/careers" element={<Careers />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/groups" element={
+              <ProtectedRoute>
+                <Groups />
+              </ProtectedRoute>
+            } />
+            <Route path="/groups/:groupId" element={
+              <ProtectedRoute>
+                <GroupDetail />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/messages" element={
               <AdminRoute>
                 <AdminMessages />
+              </AdminRoute>
+            } />
+            <Route path="/admin/groups" element={
+              <AdminRoute>
+                <AdminGroups />
               </AdminRoute>
             } />
             

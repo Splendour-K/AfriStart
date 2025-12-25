@@ -39,6 +39,7 @@ const DashboardLayout = ({ children, title, subtitle, headerActions }: Dashboard
     { id: "dashboard", label: "Dashboard", icon: Home, path: "/dashboard" },
     { id: "discover", label: "Discover", icon: Compass, path: "/discover" },
     { id: "connections", label: "Connections", icon: Users, path: "/connections" },
+    { id: "groups", label: "Groups", icon: Users, path: "/groups" },
     { id: "ideas", label: "My Ideas", icon: Lightbulb, path: "/ideas" },
     { id: "goals", label: "Goals", icon: Target, path: "/goals" },
     { id: "messages", label: "Messages", icon: MessageSquare, path: "/messages" },

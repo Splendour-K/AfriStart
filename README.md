@@ -52,6 +52,14 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_ADMIN_EMAILS=admin1@example.com,admin2@example.com
 ```
 
+### 3b. Apply Groups migrations
+
+Run the SQL in `supabase/schema.sql` (append-only) inside the Supabase SQL Editor to create the new groups feature tables:
+- `groups`, `group_memberships`, `group_ideas`, `group_idea_votes`, `group_idea_comments`, `group_idea_members`
+- RLS policies for membership, ideas, votes, comments, and collaborators
+
+After running, redeploy to Vercel so the new env var and schema are live.
+
 ### 4. Enable Google OAuth (Optional)
 
 1. Go to **Authentication > Providers** in Supabase
