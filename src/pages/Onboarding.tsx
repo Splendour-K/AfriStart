@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { 
   ArrowRight, 
   ArrowLeft, 
@@ -143,46 +144,34 @@ const Onboarding = () => {
 
     setIsLoading(true);
 
-    try {
-      const { error } = await updateProfile({
-        bio: formData.bio,
-        skills: formData.skills,
-        interests: formData.interests,
-        role: formData.role,
-        linkedin_url: formData.linkedin_url || undefined,
-        twitter_url: formData.twitter_url || undefined,
-        website_url: formData.website_url || undefined,
-        is_onboarded: true,
-      });
+    const { error } = await updateProfile({
+      bio: formData.bio,
+      skills: formData.skills,
+      interests: formData.interests,
+      role: formData.role,
+      linkedin_url: formData.linkedin_url || undefined,
+      twitter_url: formData.twitter_url || undefined,
+      website_url: formData.website_url || undefined,
+      is_onboarded: true,
+    });
 
-      if (error) {
-        toast({
-          title: "Profile update failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
+    if (error) {
       toast({
-        title: "Welcome aboard! 🎉",
-        description: "Your profile is complete. Start exploring potential co-founders!",
-      });
-
-      // Wait a bit for the profile to refresh in context
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setIsLoading(false);
-      navigate("/dashboard");
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
+        title: "Profile update failed",
+        description: error.message,
         variant: "destructive",
       });
       setIsLoading(false);
+      return;
     }
+
+    toast({
+      title: "Welcome aboard! 🎉",
+      description: "Your profile is complete. Start exploring potential co-founders!",
+    });
+
+    setIsLoading(false);
+    navigate("/dashboard");
   };
 
   return (
@@ -233,6 +222,17 @@ const Onboarding = () => {
               </div>
 
               <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Profile Picture (Optional)</Label>
+                  <AvatarUpload
+                    currentAvatarUrl={formData.avatar_url}
+                    onUploadComplete={(url) => setFormData((prev) => ({ ...prev, avatar_url: url }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Add a profile picture to help others recognize you
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="bio">Your Bio</Label>
                   <Textarea

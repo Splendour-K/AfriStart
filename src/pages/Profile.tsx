@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useEndorsements } from "@/hooks/useEndorsements";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { 
   Edit2,
   Save,
@@ -181,12 +182,44 @@ const Profile = () => {
       <div className="max-w-3xl mx-auto">
         {/* Profile Header Card */}
         <div className="bg-card rounded-2xl border border-border p-6 mb-6">
-          <div className="flex items-start gap-6">
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-              <span className="text-primary-foreground font-bold text-4xl">
-                {profile?.full_name?.charAt(0) || 'U'}
-              </span>
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            {/* Avatar Section */}
+            <div className="w-full md:w-auto flex justify-center md:block">
+              {isEditing ? (
+                <AvatarUpload
+                  currentAvatarUrl={profile?.avatar_url}
+                  onUploadSuccess={(url) => {
+                    toast({
+                      title: "Avatar updated!",
+                      description: "Your profile picture has been updated.",
+                    });
+                  }}
+                  onUploadError={(error) => {
+                    toast({
+                      title: "Upload failed",
+                      description: error,
+                      variant: "destructive",
+                    });
+                  }}
+                  size="lg"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-2xl overflow-hidden bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile?.full_name || "Avatar"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-primary-foreground font-bold text-4xl">
+                      {profile?.full_name?.charAt(0) || 'U'}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
+
             <div className="flex-1">
               {isEditing ? (
                 <div className="space-y-4">

@@ -206,11 +206,21 @@ const Discover = () => {
                 <div className="flex items-start gap-4">
                   <Link 
                     to={`/user/${match.id}`}
-                    className="w-14 h-14 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0 hover:scale-105 transition-transform"
+                    className="w-14 h-14 rounded-full flex-shrink-0 hover:scale-105 transition-transform"
                   >
-                    <span className="text-primary-foreground font-bold text-xl">
-                      {match.full_name?.charAt(0) || "?"}
-                    </span>
+                    {match.avatar_url ? (
+                      <img 
+                        src={match.avatar_url} 
+                        alt={match.full_name || 'User'}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                        <span className="text-primary-foreground font-bold text-xl">
+                          {match.full_name?.charAt(0) || "?"}
+                        </span>
+                      </div>
+                    )}
                   </Link>
                   <div className="flex-1 min-w-0">
                     <Link to={`/user/${match.id}`} className="hover:underline">

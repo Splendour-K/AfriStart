@@ -136,11 +136,19 @@ const Connections = () => {
                     className="bg-card rounded-2xl border border-border p-6 hover:shadow-soft transition-shadow"
                   >
                     <div className="flex items-start gap-4 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary-foreground font-bold text-lg">
-                          {person?.full_name?.charAt(0) || "?"}
-                        </span>
-                      </div>
+                      {person?.avatar_url ? (
+                        <img 
+                          src={person.avatar_url} 
+                          alt={person.full_name || 'User'}
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
+                          <span className="text-primary-foreground font-bold text-lg">
+                            {person?.full_name?.charAt(0) || "?"}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <h3 className="font-display font-bold text-foreground">{person?.full_name}</h3>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -196,11 +204,19 @@ const Connections = () => {
                 return (
                   <div key={connection.id} className="bg-card rounded-2xl border border-border p-6">
                     <div className="flex items-start gap-4 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ochre to-forest flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary-foreground font-bold text-lg">
-                          {person?.full_name?.charAt(0) || "?"}
-                        </span>
-                      </div>
+                      {person?.avatar_url ? (
+                        <img 
+                          src={person.avatar_url} 
+                          alt={person.full_name || 'User'}
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ochre to-forest flex items-center justify-center flex-shrink-0">
+                          <span className="text-primary-foreground font-bold text-lg">
+                            {person?.full_name?.charAt(0) || "?"}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <h3 className="font-display font-bold text-foreground">{person?.full_name}</h3>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">

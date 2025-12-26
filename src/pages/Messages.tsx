@@ -133,11 +133,19 @@ const Messages = () => {
                       selectedConversation?.id === conv.id && "bg-muted"
                     )}
                   >
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-                      <span className="text-primary-foreground font-bold">
-                        {conv.other_user?.full_name?.charAt(0) || "?"}
-                      </span>
-                    </div>
+                    {conv.other_user?.avatar_url ? (
+                      <img 
+                        src={conv.other_user.avatar_url} 
+                        alt={conv.other_user.full_name || 'User'}
+                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
+                        <span className="text-primary-foreground font-bold">
+                          {conv.other_user?.full_name?.charAt(0) || "?"}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-medium text-foreground truncate">
@@ -197,11 +205,19 @@ const Messages = () => {
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold">
-                      {selectedConversation.other_user?.full_name?.charAt(0) || "?"}
-                    </span>
-                  </div>
+                  {selectedConversation.other_user?.avatar_url ? (
+                    <img 
+                      src={selectedConversation.other_user.avatar_url} 
+                      alt={selectedConversation.other_user.full_name || 'User'}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                      <span className="text-primary-foreground font-bold">
+                        {selectedConversation.other_user?.full_name?.charAt(0) || "?"}
+                      </span>
+                    </div>
+                  )}
                   <div>
                     <p className="font-medium text-foreground">
                       {selectedConversation.other_user?.full_name}

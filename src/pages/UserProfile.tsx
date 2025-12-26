@@ -117,11 +117,19 @@ const UserProfile = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-card rounded-2xl border border-border p-6">
             <div className="flex items-start gap-6">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-                <span className="text-primary-foreground font-bold text-3xl">
-                  {profile.full_name?.charAt(0) || "?"}
-                </span>
-              </div>
+              {profile.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt={profile.full_name || 'User'}
+                  className="w-24 h-24 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
+                  <span className="text-primary-foreground font-bold text-3xl">
+                    {profile.full_name?.charAt(0) || "?"}
+                  </span>
+                </div>
+              )}
               <div className="flex-1">
                 <h1 className="font-display text-2xl font-bold text-foreground">{profile.full_name}</h1>
                 <div className="flex items-center gap-2 text-muted-foreground mt-1">
