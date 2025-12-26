@@ -65,7 +65,7 @@ export function useNotifications() {
         .limit(50);
 
       if (error) {
-        console.warn("Notifications fetch error:", error.message);
+        // Silently fail on notifications errors to prevent auth cascades
         return [];
       }
 
@@ -76,6 +76,8 @@ export function useNotifications() {
     enabled: !!user,
     staleTime: 1000 * 30,
     refetchInterval: 1000 * 30,
+    retry: 1, // Reduce retry attempts to avoid rate-limiting
+    retryDelay: 2000, // Wait 2s before retry
   });
 }
 
@@ -94,13 +96,15 @@ export function useNotificationPreferences() {
         .maybeSingle();
 
       if (error && !error.message.includes("does not exist")) {
-        console.warn("Notification prefs fallback:", error.message);
+        // Silently fallback to defaults
       }
 
       return data || defaultPreferences;
     },
     enabled: !!user,
     staleTime: 1000 * 60,
+    retry: 1,
+    retryDelay: 2000,
   });
 }
 

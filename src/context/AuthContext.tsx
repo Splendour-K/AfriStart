@@ -43,23 +43,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (error) {
-          console.error('Error fetching profile:', error);
+          // Silently fail on profile fetch errors to prevent auth loops
           return null;
         }
 
         return data as Profile | null;
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        // Silently fail to prevent cascading auth failures
         return null;
       }
     })();
 
-    // Time out after 3s to prevent long blocking fetch
+    // Time out after 5s (increased from 3s) to prevent long blocking fetch
     const timeoutPromise = new Promise<null>((resolve) => {
       setTimeout(() => {
-        console.warn('Profile fetch timeout - continuing without profile');
+        // Silently timeout - don't spam console warnings that can trigger refetch storms
         resolve(null);
-      }, 3000);
+      }, 5000);
     });
 
     return Promise.race([fetchPromise, timeoutPromise]);
@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
-          console.warn('Session refresh failed:', error);
+          // Silently ignore refresh errors to prevent cascading failures
           return;
         }
 
@@ -170,9 +170,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(data.session.user);
         }
       } catch (e) {
-        console.warn('Session refresh error:', e);
+        // Silently catch refresh errors
       }
-    }, 10 * 60 * 1000); // every 10 minutes
+    }, 15 * 60 * 1000); // every 15 minutes (reduced frequency to avoid rate-limiting)
 
     return () => {
       mounted = false;
