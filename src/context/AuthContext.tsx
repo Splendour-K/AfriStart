@@ -93,10 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
         
         if (error) {
+          // IMPORTANT: don't forcibly sign out on getSession errors.
+          // In some environments (blocked storage / transient network), this can cause an infinite logout loop.
           console.error('Error getting session:', error);
-          // Clear any invalid session
-          await supabase.auth.signOut();
-          setIsLoading(false);
+          setSession(null);
+          setUser(null);
+          if (mounted) {
+            setIsLoading(false);
+          }
           return;
         }
         
@@ -150,10 +154,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // Best-effort: keep session fresh. If refresh fails, we log but we do NOT auto sign-out.
+    // Supabase JS already handles refresh in most cases, but this reduces surprise logouts.
+    const refreshInterval = window.setInterval(async () => {
+      try {
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.warn('Session refresh failed:', error);
+          return;
+        }
+
+        if (!mounted) return;
+        if (data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+        }
+      } catch (e) {
+        console.warn('Session refresh error:', e);
+      }
+    }, 10 * 60 * 1000); // every 10 minutes
+
     return () => {
       mounted = false;
       clearTimeout(loadingTimeout);
       subscription.unsubscribe();
+      window.clearInterval(refreshInterval);
     };
   }, []);
 

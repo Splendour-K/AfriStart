@@ -9,19 +9,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,
     persistSession: true,
+    autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'pkce'
   },
-  global: {
-    headers: {
-      'x-client-info': 'afristart-web'
-    }
-  },
-  db: {
-    schema: 'public'
-  }
 });
 
 // Database types for profiles
