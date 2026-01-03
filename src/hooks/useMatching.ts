@@ -449,8 +449,7 @@ export function useCreateStartupIdea() {
     mutationFn: async (idea: { 
       title: string; 
       description: string; 
-      industry: string; 
-      stage?: string;
+      category: string; 
       looking_for?: string[];
     }) => {
       if (!user) throw new Error('Not authenticated');

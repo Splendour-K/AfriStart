@@ -63,9 +63,6 @@ CREATE TRIGGER on_auth_user_created
 
 -- Done! Your signup should now work.
 
--- ============================================
--- STARTUP IDEAS TABLE
--- ============================================
 
 CREATE TABLE IF NOT EXISTS public.startup_ideas (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -101,6 +98,58 @@ CREATE POLICY "Users or admins can delete ideas"
   ON public.startup_ideas FOR DELETE 
   USING (auth.uid() = user_id OR public.is_admin());
 
+-- Idea likes table and policies
+CREATE TABLE IF NOT EXISTS public.idea_likes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  idea_id UUID REFERENCES public.startup_ideas(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(idea_id, user_id)
+);
+
+ALTER TABLE public.idea_likes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Idea likes are viewable by everyone" ON public.idea_likes;
+DROP POLICY IF EXISTS "Users can like ideas" ON public.idea_likes;
+DROP POLICY IF EXISTS "Users can unlike their ideas" ON public.idea_likes;
+
+CREATE POLICY "Idea likes are viewable by everyone"
+  ON public.idea_likes FOR SELECT USING (true);
+
+CREATE POLICY "Users can like ideas"
+  ON public.idea_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can unlike their ideas"
+  ON public.idea_likes FOR DELETE USING (auth.uid() = user_id OR public.is_admin());
+
+-- Idea comments table and policies
+CREATE TABLE IF NOT EXISTS public.idea_comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  idea_id UUID REFERENCES public.startup_ideas(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.idea_comments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Idea comments are viewable" ON public.idea_comments;
+DROP POLICY IF EXISTS "Users can comment on ideas" ON public.idea_comments;
+DROP POLICY IF EXISTS "Users can update their idea comments" ON public.idea_comments;
+DROP POLICY IF EXISTS "Users can delete their idea comments" ON public.idea_comments;
+
+CREATE POLICY "Idea comments are viewable" 
+  ON public.idea_comments FOR SELECT USING (true);
+
+CREATE POLICY "Users can comment on ideas" 
+  ON public.idea_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their idea comments" 
+  ON public.idea_comments FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their idea comments" 
+  ON public.idea_comments FOR DELETE USING (auth.uid() = user_id OR public.is_admin());
 -- ============================================
 -- MESSAGES TABLE (Real-time Chat)
 -- ============================================

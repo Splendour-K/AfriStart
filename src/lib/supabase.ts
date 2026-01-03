@@ -40,9 +40,24 @@ export interface StartupIdea {
   user_id: string;
   title: string;
   description: string;
-  industry: string;
-  stage: 'idea' | 'validation' | 'mvp' | 'growth';
+  category: string;
   looking_for: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IdeaLike {
+  id: string;
+  idea_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface IdeaComment {
+  id: string;
+  idea_id: string;
+  user_id: string;
+  content: string;
   created_at: string;
   updated_at: string;
 }

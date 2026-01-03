@@ -34,9 +34,27 @@ CREATE TABLE IF NOT EXISTS startup_ideas (
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
-  industry TEXT NOT NULL,
-  stage TEXT CHECK (stage IN ('idea', 'validation', 'mvp', 'growth')) DEFAULT 'idea',
+  category TEXT NOT NULL,
   looking_for TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- Table for idea likes
+CREATE TABLE IF NOT EXISTS idea_likes (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  idea_id UUID REFERENCES startup_ideas(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  UNIQUE(idea_id, user_id)
+);
+
+-- Table for idea comments
+CREATE TABLE IF NOT EXISTS idea_comments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  idea_id UUID REFERENCES startup_ideas(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
@@ -91,6 +109,8 @@ CREATE TABLE IF NOT EXISTS resources (
 -- Enable RLS on all tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE startup_ideas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idea_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idea_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
@@ -117,6 +137,29 @@ CREATE POLICY "Users can update their own startup ideas" ON startup_ideas
   FOR UPDATE USING (auth.uid() = user_id);
 
 CREATE POLICY "Users or admins can delete startup ideas" ON startup_ideas
+  FOR DELETE USING (auth.uid() = user_id OR public.is_admin());
+
+-- Idea likes policies
+CREATE POLICY "Idea likes are viewable by everyone" ON idea_likes
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can like ideas" ON idea_likes
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can unlike their ideas" ON idea_likes
+  FOR DELETE USING (auth.uid() = user_id OR public.is_admin());
+
+-- Idea comments policies
+CREATE POLICY "Idea comments are viewable by everyone" ON idea_comments
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can comment on ideas" ON idea_comments
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can edit their comments" ON idea_comments
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users or admins can delete comments" ON idea_comments
   FOR DELETE USING (auth.uid() = user_id OR public.is_admin());
 
 -- Connections policies
@@ -169,6 +212,8 @@ CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
 CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id);
 CREATE INDEX IF NOT EXISTS idx_startup_ideas_user ON startup_ideas(user_id);
+CREATE INDEX IF NOT EXISTS idx_idea_likes_idea ON idea_likes(idea_id);
+CREATE INDEX IF NOT EXISTS idx_idea_comments_idea ON idea_comments(idea_id);
 
 -- Function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -299,6 +344,11 @@ $$;
 
 CREATE TRIGGER update_startup_ideas_updated_at
   BEFORE UPDATE ON startup_ideas
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_idea_comments_updated_at
+  BEFORE UPDATE ON idea_comments
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 

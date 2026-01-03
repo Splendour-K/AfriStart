@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import Discover from "./pages/Discover";
 import Connections from "./pages/Connections";
 import Ideas from "./pages/Ideas";
+import IdeaDetail from "./pages/IdeaDetail";
 import Goals from "./pages/Goals";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
@@ -113,6 +114,11 @@ const App = () => (
             <Route path="/ideas" element={
               <ProtectedRoute>
                 <Ideas />
+              </ProtectedRoute>
+            } />
+            <Route path="/ideas/:ideaId" element={
+              <ProtectedRoute>
+                <IdeaDetail />
               </ProtectedRoute>
             } />
             <Route path="/goals" element={

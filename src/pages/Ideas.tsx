@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -8,15 +9,16 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Lightbulb, 
+import {
+  Lightbulb,
   Plus,
   Heart,
   MessageSquare,
   Loader2,
   Users,
   Search,
-  Trash2
+  Trash2,
+  Eye
 } from "lucide-react";
 import {
   Dialog,
@@ -40,6 +42,32 @@ import {
 import { AvatarPreview } from "@/components/AvatarPreview";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 
+const PRESET_CATEGORIES = [
+  "EdTech",
+  "FinTech",
+  "HealthTech",
+  "AgriTech",
+  "E-Commerce",
+  "Logistics",
+  "Social Impact",
+  "Entertainment"
+];
+
+interface IdeaProfile {
+  full_name: string;
+  university: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+interface IdeaLikeRow {
+  user_id: string;
+}
+
+interface IdeaCommentStub {
+  id: string;
+}
+
 interface StartupIdea {
   id: string;
   title: string;
@@ -48,12 +76,9 @@ interface StartupIdea {
   looking_for: string[];
   user_id: string;
   created_at: string;
-  profiles: {
-    full_name: string;
-    university: string;
-    email?: string;
-    avatar_url?: string;
-  };
+  profiles: IdeaProfile | null;
+  idea_likes: IdeaLikeRow[];
+  idea_comments: IdeaCommentStub[];
 }
 
 const Ideas = () => {
@@ -64,6 +89,7 @@ const Ideas = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [ideaPendingDelete, setIdeaPendingDelete] = useState<StartupIdea | null>(null);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
 
   const [newIdea, setNewIdea] = useState({
     title: "",
@@ -71,18 +97,6 @@ const Ideas = () => {
     category: "",
     looking_for: [] as string[],
   });
-
-  const categories = [
-    "EdTech",
-    "FinTech",
-    "HealthTech",
-    "AgriTech",
-    "E-Commerce",
-    "Logistics",
-    "Social Impact",
-    "Entertainment",
-    "Other"
-  ];
 
   const roles = [
     "Tech/Engineering",
@@ -97,18 +111,36 @@ const Ideas = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("startup_ideas")
-        .select("*, profiles(full_name, university, email, avatar_url)")
+        .select("*, profiles(full_name, university, email, avatar_url), idea_likes(user_id), idea_comments(id)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as StartupIdea[];
+      return (data as StartupIdea[]) || [];
     },
   });
 
+  const customCategories = useMemo(() => {
+    if (!ideas) return [] as string[];
+    const existing = new Set<string>();
+    ideas.forEach((idea) => {
+      if (idea.category && !PRESET_CATEGORIES.includes(idea.category)) {
+        existing.add(idea.category);
+      }
+    });
+    return Array.from(existing).sort();
+  }, [ideas]);
+
   const createIdea = useMutation({
     mutationFn: async (idea: typeof newIdea) => {
-      const { error } = await supabase.from("startup_ideas").insert({
+      const payload = {
         ...idea,
+        category: idea.category.trim(),
+      };
+      if (!payload.category) {
+        throw new Error("Category is required");
+      }
+      const { error } = await supabase.from("startup_ideas").insert({
+        ...payload,
         user_id: user?.id,
       });
       if (error) throw error;
@@ -117,6 +149,7 @@ const Ideas = () => {
       queryClient.invalidateQueries({ queryKey: ["startup-ideas"] });
       setIsDialogOpen(false);
       setNewIdea({ title: "", description: "", category: "", looking_for: [] });
+      setIsCustomCategory(false);
       toast({
         title: "Idea posted!",
         description: "Your startup idea is now visible to others.",
@@ -125,7 +158,7 @@ const Ideas = () => {
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to post your idea.",
+        description: error instanceof Error ? error.message : "Failed to post your idea.",
         variant: "destructive",
       });
     },
@@ -157,6 +190,36 @@ const Ideas = () => {
     },
   });
 
+  const toggleLike = useMutation({
+    mutationFn: async ({ ideaId, liked }: { ideaId: string; liked: boolean }) => {
+      if (!user) throw new Error("You must be signed in to like an idea.");
+
+      if (liked) {
+        const { error } = await supabase
+          .from("idea_likes")
+          .delete()
+          .eq("idea_id", ideaId)
+          .eq("user_id", user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("idea_likes")
+          .insert({ idea_id: ideaId, user_id: user.id });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["startup-ideas"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Unable to update like",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newIdea.title || !newIdea.description || !newIdea.category) {
@@ -179,6 +242,21 @@ const Ideas = () => {
     }));
   };
 
+  const handleCategorySelect = (category: string) => {
+    setIsCustomCategory(false);
+    setNewIdea((prev) => ({ ...prev, category }));
+  };
+
+  const enableCustomCategory = () => {
+    setIsCustomCategory(true);
+    setNewIdea((prev) => ({ ...prev, category: PRESET_CATEGORIES.includes(prev.category) ? "" : prev.category }));
+  };
+
+  const handleToggleLike = (idea: StartupIdea) => {
+    const liked = idea.idea_likes?.some((like) => like.user_id === user?.id);
+    toggleLike.mutate({ ideaId: idea.id, liked });
+  };
+
   const filteredIdeas = ideas?.filter((idea) => {
     const matchesSearch =
       idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -186,6 +264,10 @@ const Ideas = () => {
     const matchesCategory = !selectedCategory || idea.category === selectedCategory;
     return matchesSearch && matchesCategory;
   }) || [];
+
+  const allFilterCategories = useMemo(() => {
+    return [...PRESET_CATEGORIES, ...customCategories];
+  }, [customCategories]);
 
   return (
     <DashboardLayout
@@ -242,17 +324,38 @@ const Ideas = () => {
               <div className="space-y-2">
                 <Label>Category *</Label>
                 <div className="flex flex-wrap gap-2">
-                  {categories.map((cat) => (
+                  {PRESET_CATEGORIES.map((cat) => (
                     <Badge
                       key={cat}
-                      variant={newIdea.category === cat ? "default" : "outline"}
+                      variant={!isCustomCategory && newIdea.category === cat ? "default" : "outline"}
                       className="cursor-pointer"
-                      onClick={() => setNewIdea({ ...newIdea, category: cat })}
+                      onClick={() => handleCategorySelect(cat)}
                     >
                       {cat}
                     </Badge>
                   ))}
+                  <Badge
+                    variant={isCustomCategory ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={enableCustomCategory}
+                  >
+                    Custom
+                  </Badge>
                 </div>
+                {isCustomCategory && (
+                  <div className="space-y-2 pt-2">
+                    <Label htmlFor="custom-category">Custom Category *</Label>
+                    <Input
+                      id="custom-category"
+                      placeholder="e.g., Climate Tech"
+                      value={newIdea.category}
+                      onChange={(e) => setNewIdea({ ...newIdea, category: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Pick a short, descriptive category to help others discover your idea.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Looking For</Label>
@@ -290,7 +393,7 @@ const Ideas = () => {
         >
           All
         </Button>
-        {categories.map((cat) => (
+        {allFilterCategories.map((cat) => (
           <Button
             key={cat}
             variant={selectedCategory === cat ? "default" : "outline"}
@@ -391,13 +494,43 @@ const Ideas = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
-                    <Heart className="w-4 h-4" />
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <MessageSquare className="w-4 h-4 mr-1" />
-                    Connect
-                  </Button>
+                  {(() => {
+                    const likedByUser = idea.idea_likes?.some((like) => like.user_id === user?.id);
+                    const likeCount = idea.idea_likes?.length ?? 0;
+                    const commentCount = idea.idea_comments?.length ?? 0;
+                    const isUpdatingLike = toggleLike.isPending && toggleLike.variables?.ideaId === idea.id;
+                    return (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleLike(idea)}
+                          disabled={isUpdatingLike}
+                          className="gap-1"
+                          aria-label="Toggle like"
+                        >
+                          {isUpdatingLike ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Heart className={`w-4 h-4 ${likedByUser ? "fill-terracotta text-terracotta" : ""}`} />
+                          )}
+                          <span className="text-xs font-medium">{likeCount}</span>
+                        </Button>
+                        <Button asChild variant="outline" size="sm" className="gap-1">
+                          <Link to={`/ideas/${idea.id}`}>
+                            <MessageSquare className="w-4 h-4" />
+                            {commentCount}
+                          </Link>
+                        </Button>
+                        <Button asChild variant="ghost" size="sm" className="gap-1">
+                          <Link to={`/ideas/${idea.id}`}>
+                            <Eye className="w-4 h-4" />
+                            View details
+                          </Link>
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
