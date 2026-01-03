@@ -38,21 +38,21 @@ const Discover = () => {
 
   const [optimisticPending, setOptimisticPending] = useState<Set<string>>(new Set());
 
-  const pendingSentIds = useMemo(
-    () => new Set((connectionsData?.sent || []).map((c: any) => c.receiver_id)),
-    [connectionsData]
-  );
+  const pendingSentIds = useMemo(() => {
+    const sentConnections = connectionsData?.sent ?? [];
+    return new Set(sentConnections.map((connection) => connection.receiver_id));
+  }, [connectionsData]);
 
-  const pendingIncomingIds = useMemo(
-    () => new Set((connectionsData?.pending || []).map((c: any) => c.requester_id)),
-    [connectionsData]
-  );
+  const pendingIncomingIds = useMemo(() => {
+    const pendingConnections = connectionsData?.pending ?? [];
+    return new Set(pendingConnections.map((connection) => connection.requester_id));
+  }, [connectionsData]);
 
   const acceptedIds = useMemo(() => {
     const set = new Set<string>();
-    (connectionsData?.accepted || []).forEach((c: any) => {
+    (connectionsData?.accepted ?? []).forEach((connection) => {
       if (!user?.id) return;
-      const otherId = c.requester_id === user.id ? c.receiver_id : c.requester_id;
+      const otherId = connection.requester_id === user.id ? connection.receiver_id : connection.requester_id;
       if (otherId) set.add(otherId);
     });
     return set;
@@ -103,10 +103,11 @@ const Discover = () => {
         title: "Connection request sent!",
         description: "Request set to pending. Share one focused proposal (max 50 words) while you wait.",
       });
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send connection request.";
       toast({
         title: "Could not send request",
-        description: err?.message || "Failed to send connection request.",
+        description: message,
         variant: "destructive",
       });
     }

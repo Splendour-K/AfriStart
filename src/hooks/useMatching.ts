@@ -69,7 +69,7 @@ export function calculateMatchScore(currentUser: Profile, otherUser: Profile): n
 // Calculate profile completeness percentage
 export function calculateProfileCompleteness(profile: Profile): number {
   let completed = 0;
-  let total = 8;
+  const total = 8;
 
   if (profile.full_name) completed++;
   if (profile.university) completed++;
@@ -89,6 +89,23 @@ export interface MatchedProfile extends Profile {
   sharedInterests: string[];
   complementarySkills: string[];
 }
+
+export interface ConnectionWithRelations extends Connection {
+  requester?: Profile | null;
+  receiver?: Profile | null;
+}
+
+export interface ConnectionsData {
+  pending: ConnectionWithRelations[];
+  accepted: ConnectionWithRelations[];
+  sent: ConnectionWithRelations[];
+}
+
+const EMPTY_CONNECTIONS: ConnectionsData = {
+  pending: [],
+  accepted: [],
+  sent: [],
+};
 
 // Hook to fetch potential co-founder matches
 export function useCofounderMatches(limit: number = 10) {
@@ -149,10 +166,10 @@ export function useCofounderMatches(limit: number = 10) {
 export function useConnections() {
   const { user } = useAuth();
 
-  return useQuery({
+  return useQuery<ConnectionsData>({
     queryKey: ['connections', user?.id],
-    queryFn: async () => {
-      if (!user) return { pending: [], accepted: [], sent: [] };
+    queryFn: async (): Promise<ConnectionsData> => {
+      if (!user) return EMPTY_CONNECTIONS;
 
       // Fetch connections where user is requester or receiver
       const { data: connections, error } = await supabase
@@ -162,25 +179,28 @@ export function useConnections() {
           requester:profiles!connections_requester_id_fkey(*),
           receiver:profiles!connections_receiver_id_fkey(*)
         `)
-        .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`);
+        .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .returns<ConnectionWithRelations[]>();
 
       if (error) {
         console.error('Error fetching connections:', error);
-        return { pending: [], accepted: [], sent: [] };
+        return EMPTY_CONNECTIONS;
       }
 
+      const records = connections ?? [];
+
       // Categorize connections
-      const pending = connections?.filter(
-        (c: any) => c.status === 'pending' && c.receiver_id === user.id
-      ) || [];
+      const pending = records.filter(
+        (c) => c.status === 'pending' && c.receiver_id === user.id
+      );
       
-      const sent = connections?.filter(
-        (c: any) => c.status === 'pending' && c.requester_id === user.id
-      ) || [];
+      const sent = records.filter(
+        (c) => c.status === 'pending' && c.requester_id === user.id
+      );
       
-      const accepted = connections?.filter(
-        (c: any) => c.status === 'accepted'
-      ) || [];
+      const accepted = records.filter(
+        (c) => c.status === 'accepted'
+      );
 
       return { pending, accepted, sent };
     },

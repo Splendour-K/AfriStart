@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, Loader2, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
@@ -12,6 +12,9 @@ interface AvatarUploadProps {
   size?: "sm" | "md" | "lg";
 }
 
+const MAX_FILE_SIZE_MB = 8;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 export function AvatarUpload({
   currentAvatarUrl,
   onUploadSuccess,
@@ -21,7 +24,26 @@ export function AvatarUpload({
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl || null);
+  const [sizeError, setSizeError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  const cleanupObjectUrl = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      cleanupObjectUrl();
+    };
+  }, []);
+
+  useEffect(() => {
+    setPreviewUrl(currentAvatarUrl || null);
+  }, [currentAvatarUrl]);
 
   const sizeClasses = {
     sm: "w-20 h-20",
@@ -82,16 +104,20 @@ export function AvatarUpload({
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
+    setSizeError(null);
+
     // Validate file type
     const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!validTypes.includes(file.type)) {
-      onUploadError?.("Please upload a valid image (JPEG, PNG, WebP, or GIF)");
       return;
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      onUploadError?.("Image must be less than 5MB");
+    // Validate file size (8MB)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
+      const message = `Image is ${sizeInMb}MB which exceeds the ${MAX_FILE_SIZE_MB}MB limit.`;
+      setSizeError(message);
+      onUploadError?.(message);
       return;
     }
 
@@ -99,7 +125,9 @@ export function AvatarUpload({
       setUploading(true);
 
       // Show preview
+      cleanupObjectUrl();
       const objectUrl = URL.createObjectURL(file);
+      objectUrlRef.current = objectUrl;
       setPreviewUrl(objectUrl);
 
       // Compress image
@@ -138,11 +166,13 @@ export function AvatarUpload({
 
       if (updateError) throw updateError;
 
+      setPreviewUrl(publicUrl);
+      cleanupObjectUrl();
+      setSizeError(null);
       onUploadSuccess(publicUrl);
-      URL.revokeObjectURL(objectUrl);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Avatar upload error:", error);
-      onUploadError?.(error.message || "Failed to upload avatar");
+      cleanupObjectUrl();
       setPreviewUrl(currentAvatarUrl || null);
     } finally {
       setUploading(false);
@@ -167,11 +197,14 @@ export function AvatarUpload({
 
       if (updateError) throw updateError;
 
+      cleanupObjectUrl();
       setPreviewUrl(null);
+      setSizeError(null);
       onUploadSuccess("");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Avatar removal error:", error);
-      onUploadError?.(error.message || "Failed to remove avatar");
+      const message = error instanceof Error ? error.message : "Failed to remove avatar";
+      onUploadError?.(message);
     } finally {
       setUploading(false);
     }
@@ -234,8 +267,11 @@ export function AvatarUpload({
           {previewUrl ? "Change" : "Upload"} Photo
         </Button>
         <p className="text-xs text-muted-foreground text-center">
-          JPG, PNG, WebP or GIF. Max 5MB.
+          JPG, PNG, WebP or GIF. Max {MAX_FILE_SIZE_MB}MB.
         </p>
+        {sizeError && (
+          <p className="text-xs text-destructive text-center">{sizeError}</p>
+        )}
       </div>
     </div>
   );
