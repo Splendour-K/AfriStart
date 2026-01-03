@@ -23,6 +23,7 @@ export interface Conversation {
     full_name: string;
     university: string;
     avatar_url?: string;
+    email?: string;
   };
   last_message?: Message;
   unread_count?: number;
@@ -102,7 +103,7 @@ export function useConversations() {
           // Get other user's profile
           const { data: otherUser } = await supabase
             .from("profiles")
-            .select("id, full_name, university, avatar_url")
+            .select("id, full_name, university, avatar_url, email")
             .eq("id", otherUserId)
             .single();
 

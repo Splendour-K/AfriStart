@@ -1,16 +1,5 @@
--- Create storage bucket for avatars
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'avatars',
-  'avatars',
-  true,
-  5242880, -- 5MB limit
-  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-)
-ON CONFLICT (id) DO NOTHING;
-
--- Enable RLS on storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- RLS Policies for Avatars Storage
+-- Run this in Supabase Dashboard -> SQL Editor AFTER creating the bucket
 
 -- Policy: Users can upload their own avatar
 CREATE POLICY "Users can upload their own avatar"

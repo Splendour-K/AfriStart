@@ -15,7 +15,8 @@ import {
   MessageSquare,
   Loader2,
   Users,
-  Search
+  Search,
+  Trash2
 } from "lucide-react";
 import {
   Dialog,
@@ -26,6 +27,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AvatarPreview } from "@/components/AvatarPreview";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 interface StartupIdea {
   id: string;
@@ -38,16 +51,19 @@ interface StartupIdea {
   profiles: {
     full_name: string;
     university: string;
+    email?: string;
+    avatar_url?: string;
   };
 }
 
 const Ideas = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [ideaPendingDelete, setIdeaPendingDelete] = useState<StartupIdea | null>(null);
 
   const [newIdea, setNewIdea] = useState({
     title: "",
@@ -81,7 +97,7 @@ const Ideas = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("startup_ideas")
-        .select("*, profiles(full_name, university)")
+        .select("*, profiles(full_name, university, email, avatar_url)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -110,6 +126,32 @@ const Ideas = () => {
       toast({
         title: "Error",
         description: "Failed to post your idea.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteIdea = useMutation({
+    mutationFn: async (ideaId: string) => {
+      const { error } = await supabase
+        .from("startup_ideas")
+        .delete()
+        .eq("id", ideaId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["startup-ideas"] });
+      toast({
+        title: "Idea removed",
+        description: "The startup idea has been deleted.",
+      });
+      setIdeaPendingDelete(null);
+    },
+    onError: () => {
+      toast({
+        title: "Unable to delete",
+        description: "We couldn't delete this idea. Please try again.",
         variant: "destructive",
       });
     },
@@ -284,11 +326,22 @@ const Ideas = () => {
               key={idea.id}
               className="bg-card rounded-2xl border border-border p-6 hover:shadow-elevated transition-shadow"
             >
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-4 gap-3">
                 <Badge variant="secondary">{idea.category}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(idea.created_at).toLocaleDateString()}
-                </span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{new Date(idea.created_at).toLocaleDateString()}</span>
+                  {(idea.user_id === user?.id || isAdmin) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => setIdeaPendingDelete(idea)}
+                      aria-label="Delete idea"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <h3 className="font-display text-lg font-bold text-foreground mb-2">
@@ -316,13 +369,24 @@ const Ideas = () => {
 
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
-                    <span className="text-primary-foreground text-xs font-bold">
-                      {idea.profiles?.full_name?.charAt(0) || "?"}
-                    </span>
-                  </div>
+                  <AvatarPreview
+                    src={idea.profiles?.avatar_url}
+                    name={idea.profiles?.full_name}
+                    size={40}
+                    className="flex-shrink-0"
+                    fallback={
+                      <div className="w-full h-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                        <span className="text-primary-foreground text-xs font-bold">
+                          {idea.profiles?.full_name?.charAt(0) || "?"}
+                        </span>
+                      </div>
+                    }
+                  />
                   <div>
-                    <p className="text-sm font-medium text-foreground">{idea.profiles?.full_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{idea.profiles?.full_name}</p>
+                      <VerifiedBadge email={idea.profiles?.email} compact />
+                    </div>
                     <p className="text-xs text-muted-foreground">{idea.profiles?.university}</p>
                   </div>
                 </div>
@@ -340,6 +404,27 @@ const Ideas = () => {
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!ideaPendingDelete} onOpenChange={(open) => !open && setIdeaPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this idea?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The idea will be removed for everyone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteIdea.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => ideaPendingDelete && deleteIdea.mutate(ideaPendingDelete.id)}
+              disabled={deleteIdea.isPending}
+            >
+              {deleteIdea.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };

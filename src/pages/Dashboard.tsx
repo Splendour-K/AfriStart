@@ -28,6 +28,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { AvatarPreview } from "@/components/AvatarPreview";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -225,21 +227,24 @@ const Dashboard = () => {
             <div className="divide-y divide-border">
               {matches.map((match) => (
                 <div key={match.id} className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
-                  {match.avatar_url ? (
-                    <img 
-                      src={match.avatar_url} 
-                      alt={match.full_name || 'User'}
-                      className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-                      <span className="text-primary-foreground font-bold">
-                        {match.full_name?.charAt(0) || 'U'}
-                      </span>
-                    </div>
-                  )}
+                  <AvatarPreview
+                    src={match.avatar_url}
+                    name={match.full_name}
+                    size={48}
+                    className="flex-shrink-0"
+                    fallback={
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                        <span className="text-primary-foreground font-bold">
+                          {match.full_name?.charAt(0) || 'U'}
+                        </span>
+                      </div>
+                    }
+                  />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground">{match.full_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-foreground">{match.full_name}</p>
+                      <VerifiedBadge email={match.email} compact />
+                    </div>
                     <p className="text-sm text-muted-foreground truncate">
                       {match.university}
                     </p>

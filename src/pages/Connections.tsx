@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useConnections } from "@/hooks/useMatching";
 import { useGetOrCreateConversation } from "@/hooks/useMessaging";
+import { AvatarPreview } from "@/components/AvatarPreview";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { 
@@ -136,21 +138,24 @@ const Connections = () => {
                     className="bg-card rounded-2xl border border-border p-6 hover:shadow-soft transition-shadow"
                   >
                     <div className="flex items-start gap-4 mb-4">
-                      {person?.avatar_url ? (
-                        <img 
-                          src={person.avatar_url} 
-                          alt={person.full_name || 'User'}
-                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary-foreground font-bold text-lg">
-                            {person?.full_name?.charAt(0) || "?"}
-                          </span>
-                        </div>
-                      )}
+                      <AvatarPreview
+                        src={person?.avatar_url}
+                        name={person?.full_name}
+                        size={48}
+                        className="flex-shrink-0"
+                        fallback={
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                            <span className="text-primary-foreground font-bold text-lg">
+                              {person?.full_name?.charAt(0) || "?"}
+                            </span>
+                          </div>
+                        }
+                      />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-display font-bold text-foreground">{person?.full_name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-display font-bold text-foreground">{person?.full_name}</h3>
+                          <VerifiedBadge email={person?.email} compact />
+                        </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <GraduationCap className="w-4 h-4" />
                           <span className="truncate">{person?.university}</span>
@@ -204,21 +209,24 @@ const Connections = () => {
                 return (
                   <div key={connection.id} className="bg-card rounded-2xl border border-border p-6">
                     <div className="flex items-start gap-4 mb-4">
-                      {person?.avatar_url ? (
-                        <img 
-                          src={person.avatar_url} 
-                          alt={person.full_name || 'User'}
-                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ochre to-forest flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary-foreground font-bold text-lg">
-                            {person?.full_name?.charAt(0) || "?"}
-                          </span>
-                        </div>
-                      )}
+                      <AvatarPreview
+                        src={person?.avatar_url}
+                        name={person?.full_name}
+                        size={48}
+                        className="flex-shrink-0"
+                        fallback={
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-ochre to-forest flex items-center justify-center">
+                            <span className="text-primary-foreground font-bold text-lg">
+                              {person?.full_name?.charAt(0) || "?"}
+                            </span>
+                          </div>
+                        }
+                      />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-display font-bold text-foreground">{person?.full_name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-display font-bold text-foreground">{person?.full_name}</h3>
+                          <VerifiedBadge email={person?.email} compact />
+                        </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <GraduationCap className="w-4 h-4" />
                           <span className="truncate">{person?.university}</span>

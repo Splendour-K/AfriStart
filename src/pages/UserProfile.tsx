@@ -8,6 +8,8 @@ import { supabase, Profile } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { useEndorsements, useEndorseSkill, useRemoveEndorsement } from "@/hooks/useEndorsements";
 import { useGetOrCreateConversation } from "@/hooks/useMessaging";
+import { AvatarPreview } from "@/components/AvatarPreview";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import {
   GraduationCap,
   Mail,
@@ -117,21 +119,24 @@ const UserProfile = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-card rounded-2xl border border-border p-6">
             <div className="flex items-start gap-6">
-              {profile.avatar_url ? (
-                <img 
-                  src={profile.avatar_url} 
-                  alt={profile.full_name || 'User'}
-                  className="w-24 h-24 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-                  <span className="text-primary-foreground font-bold text-3xl">
-                    {profile.full_name?.charAt(0) || "?"}
-                  </span>
-                </div>
-              )}
+              <AvatarPreview
+                src={profile.avatar_url}
+                name={profile.full_name}
+                size={96}
+                className="rounded-full"
+                fallback={
+                  <div className="w-full h-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                    <span className="text-primary-foreground font-bold text-3xl">
+                      {profile.full_name?.charAt(0) || "?"}
+                    </span>
+                  </div>
+                }
+              />
               <div className="flex-1">
-                <h1 className="font-display text-2xl font-bold text-foreground">{profile.full_name}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="font-display text-2xl font-bold text-foreground">{profile.full_name}</h1>
+                  <VerifiedBadge email={profile.email} />
+                </div>
                 <div className="flex items-center gap-2 text-muted-foreground mt-1">
                   <GraduationCap className="w-4 h-4" />
                   <span>{profile.university}</span>

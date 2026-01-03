@@ -177,19 +177,6 @@ CREATE TABLE IF NOT EXISTS public.startup_ideas (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Add is_public column if it doesn't exist (for existing tables)
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'startup_ideas' 
-        AND column_name = 'is_public'
-    ) THEN
-        ALTER TABLE public.startup_ideas ADD COLUMN is_public BOOLEAN DEFAULT TRUE;
-    END IF;
-END $$;
-
 ALTER TABLE public.startup_ideas ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public ideas are viewable by everyone" ON public.startup_ideas;

@@ -22,6 +22,8 @@ import {
   Clock,
   CheckCircle2
 } from "lucide-react";
+import { AvatarPreview } from "@/components/AvatarPreview";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 const Discover = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -204,27 +206,25 @@ const Discover = () => {
               {/* Match Score Badge */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start gap-4">
-                  <Link 
-                    to={`/user/${match.id}`}
-                    className="w-14 h-14 rounded-full flex-shrink-0 hover:scale-105 transition-transform"
-                  >
-                    {match.avatar_url ? (
-                      <img 
-                        src={match.avatar_url} 
-                        alt={match.full_name || 'User'}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
+                  <AvatarPreview
+                    src={match.avatar_url}
+                    name={match.full_name}
+                    size={56}
+                    className="flex-shrink-0"
+                    fallback={
                       <div className="w-full h-full rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
                         <span className="text-primary-foreground font-bold text-xl">
                           {match.full_name?.charAt(0) || "?"}
                         </span>
                       </div>
-                    )}
-                  </Link>
+                    }
+                  />
                   <div className="flex-1 min-w-0">
                     <Link to={`/user/${match.id}`} className="hover:underline">
-                      <h3 className="font-display font-bold text-foreground">{match.full_name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-display font-bold text-foreground">{match.full_name}</h3>
+                        <VerifiedBadge email={match.email} compact />
+                      </div>
                     </Link>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <GraduationCap className="w-4 h-4" />

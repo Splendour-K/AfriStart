@@ -22,6 +22,8 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AvatarPreview } from "@/components/AvatarPreview";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 const Messages = () => {
   const { user } = useAuth();
@@ -133,24 +135,27 @@ const Messages = () => {
                       selectedConversation?.id === conv.id && "bg-muted"
                     )}
                   >
-                    {conv.other_user?.avatar_url ? (
-                      <img 
-                        src={conv.other_user.avatar_url} 
-                        alt={conv.other_user.full_name || 'User'}
-                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary-foreground font-bold">
-                          {conv.other_user?.full_name?.charAt(0) || "?"}
-                        </span>
-                      </div>
-                    )}
+                    <AvatarPreview
+                      src={conv.other_user?.avatar_url}
+                      name={conv.other_user?.full_name}
+                      size={48}
+                      className="flex-shrink-0"
+                      fallback={
+                        <div className="w-full h-full rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                          <span className="text-primary-foreground font-bold">
+                            {conv.other_user?.full_name?.charAt(0) || "?"}
+                          </span>
+                        </div>
+                      }
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-foreground truncate">
-                          {conv.other_user?.full_name}
-                        </p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <p className="font-medium text-foreground truncate">
+                            {conv.other_user?.full_name}
+                          </p>
+                          <VerifiedBadge email={conv.other_user?.email} compact />
+                        </div>
                         {conv.last_message && (
                           <span className="text-xs text-muted-foreground flex-shrink-0">
                             {formatTime(conv.last_message.created_at)}
@@ -205,23 +210,25 @@ const Messages = () => {
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  {selectedConversation.other_user?.avatar_url ? (
-                    <img 
-                      src={selectedConversation.other_user.avatar_url} 
-                      alt={selectedConversation.other_user.full_name || 'User'}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
-                      <span className="text-primary-foreground font-bold">
-                        {selectedConversation.other_user?.full_name?.charAt(0) || "?"}
-                      </span>
-                    </div>
-                  )}
+                  <AvatarPreview
+                    src={selectedConversation.other_user?.avatar_url}
+                    name={selectedConversation.other_user?.full_name}
+                    size={40}
+                    fallback={
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                        <span className="text-primary-foreground font-bold">
+                          {selectedConversation.other_user?.full_name?.charAt(0) || "?"}
+                        </span>
+                      </div>
+                    }
+                  />
                   <div>
-                    <p className="font-medium text-foreground">
-                      {selectedConversation.other_user?.full_name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-foreground">
+                        {selectedConversation.other_user?.full_name}
+                      </p>
+                      <VerifiedBadge email={selectedConversation.other_user?.email} compact />
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {selectedConversation.other_user?.university}
                     </p>

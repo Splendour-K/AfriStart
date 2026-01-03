@@ -10,6 +10,8 @@ import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useEndorsements } from "@/hooks/useEndorsements";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { AvatarPreview } from "@/components/AvatarPreview";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { 
   Edit2,
   Save,
@@ -204,19 +206,19 @@ const Profile = () => {
                   size="lg"
                 />
               ) : (
-                <div className="w-32 h-32 rounded-2xl overflow-hidden bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center flex-shrink-0">
-                  {profile?.avatar_url ? (
-                    <img
-                      src={profile.avatar_url}
-                      alt={profile?.full_name || "Avatar"}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-primary-foreground font-bold text-4xl">
-                      {profile?.full_name?.charAt(0) || 'U'}
-                    </span>
-                  )}
-                </div>
+                <AvatarPreview
+                  src={profile?.avatar_url}
+                  name={profile?.full_name}
+                  size={128}
+                  className="rounded-2xl"
+                  fallback={
+                    <div className="w-full h-full bg-gradient-to-br from-terracotta to-ochre flex items-center justify-center">
+                      <span className="text-primary-foreground font-bold text-4xl">
+                        {profile?.full_name?.charAt(0) || 'U'}
+                      </span>
+                    </div>
+                  }
+                />
               )}
             </div>
 
@@ -242,7 +244,10 @@ const Profile = () => {
                 </div>
               ) : (
                 <>
-                  <h2 className="font-display text-2xl font-bold text-foreground">{profile?.full_name}</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-display text-2xl font-bold text-foreground">{profile?.full_name}</h2>
+                    <VerifiedBadge email={profile?.email} />
+                  </div>
                   <div className="flex items-center gap-2 text-muted-foreground mt-1">
                     <GraduationCap className="w-4 h-4" />
                     <span>{profile?.university}</span>
