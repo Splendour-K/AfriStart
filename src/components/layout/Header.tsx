@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -76,65 +77,90 @@ const Header = () => {
           </div>
 
           {/* Mobile Menu Toggle */}
-          <button
-            className="md:hidden p-2 text-foreground"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-background border-b border-border animate-slide-up">
-            <nav className="flex flex-col p-4 gap-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(link.path)
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
-              <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
-                {user ? (
-                  <>
-                    <Button asChild className="w-full" variant="outline">
-                      <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
-                    </Button>
-                    <Button
-                      className="w-full"
-                      variant="secondary"
-                      onClick={async () => {
-                        await signOut();
-                        setIsMenuOpen(false);
-                        navigate("/");
-                      }}
-                    >
-                      Sign out
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="outline" asChild className="w-full">
-                      <Link to="/login" onClick={() => setIsMenuOpen(false)}>Log In</Link>
-                    </Button>
-                    <Button variant="hero" asChild className="w-full">
-                      <Link to="/signup" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
-                    </Button>
-                  </>
-                )}
+          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <SheetTrigger asChild>
+              <button
+                className="md:hidden p-2 text-foreground"
+                aria-label="Toggle menu"
+              >
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              className="w-[85%] sm:max-w-sm p-0 border-r border-border/70 bg-background"
+            >
+              <div className="flex flex-col h-full pt-16">
+                <div className="px-6">
+                  <Link to="/" className="flex items-center gap-3" onClick={() => setIsMenuOpen(false)}>
+                    <div className="w-10 h-10 rounded-xl bg-gradient-warm flex items-center justify-center shadow-warm">
+                      <span className="text-primary-foreground font-display font-bold text-xl">A</span>
+                    </div>
+                    <span className="font-display font-semibold text-lg text-foreground">AfriStart</span>
+                  </Link>
+                </div>
+                <nav className="flex-1 px-6 py-6 space-y-1 overflow-y-auto">
+                  {navLinks.map((link) => (
+                    <SheetClose asChild key={link.name}>
+                      <Link
+                        to={link.path}
+                        onClick={() => setIsMenuOpen(false)}
+                        className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                          isActive(link.path)
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {link.name}
+                      </Link>
+                    </SheetClose>
+                  ))}
+                </nav>
+                <div className="px-6 pb-8 pt-4 border-t border-border space-y-3">
+                  {user ? (
+                    <>
+                      <SheetClose asChild>
+                        <Button asChild variant="outline" className="w-full">
+                          <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                            Dashboard
+                          </Link>
+                        </Button>
+                      </SheetClose>
+                      <Button
+                        className="w-full"
+                        variant="secondary"
+                        onClick={async () => {
+                          await signOut();
+                          setIsMenuOpen(false);
+                          navigate("/");
+                        }}
+                      >
+                        Sign out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <SheetClose asChild>
+                        <Button variant="outline" asChild className="w-full">
+                          <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                            Log In
+                          </Link>
+                        </Button>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Button variant="hero" asChild className="w-full">
+                          <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
+                            Get Started
+                          </Link>
+                        </Button>
+                      </SheetClose>
+                    </>
+                  )}
+                </div>
               </div>
-            </nav>
-          </div>
-        )}
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );

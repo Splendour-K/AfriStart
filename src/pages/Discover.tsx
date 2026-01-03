@@ -139,12 +139,12 @@ const Discover = () => {
               className="pl-10"
             />
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
+          <div className="flex flex-wrap gap-2 pb-2 sm:pb-0 sm:flex-nowrap sm:overflow-x-auto">
             <Button
               variant={selectedRole === null ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedRole(null)}
-              className="whitespace-nowrap"
+              className="flex-shrink-0 px-4 py-2 text-sm rounded-full"
             >
               All Roles
             </Button>
@@ -154,7 +154,7 @@ const Discover = () => {
                 variant={selectedRole === role ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedRole(role === selectedRole ? null : role)}
-                className="whitespace-nowrap"
+                className="flex-shrink-0 px-4 py-2 text-xs sm:text-sm rounded-full"
               >
                 {role.split("/")[0]}
               </Button>
