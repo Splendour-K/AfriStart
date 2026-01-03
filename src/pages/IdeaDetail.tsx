@@ -3,14 +3,23 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { AvatarPreview } from "@/components/AvatarPreview";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { Loader2, ArrowLeft, Heart, MessageSquare, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, Heart, MessageSquare, Trash2, Edit2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface IdeaProfile {
   full_name: string;
@@ -54,12 +63,40 @@ interface IdeaDetailData extends StartupIdeaRecord {
   comments: IdeaCommentRecord[];
 }
 
+const PRESET_CATEGORIES = [
+  "EdTech",
+  "FinTech", 
+  "HealthTech",
+  "AgriTech",
+  "E-Commerce",
+  "Logistics",
+  "Social Impact",
+  "Entertainment"
+];
+
 const IdeaDetail = () => {
   const { ideaId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
   const [commentValue, setCommentValue] = useState("");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditingCustomCategory, setIsEditingCustomCategory] = useState(false);
+  
+  const [editIdea, setEditIdea] = useState({
+    title: "",
+    description: "",
+    category: "",
+    looking_for: [] as string[],
+  });
+
+  const roles = [
+    "Tech/Engineering",
+    "Marketing/Sales", 
+    "Finance/Operations",
+    "Design/Creative",
+    "Business Development"
+  ];
 
   const {
     data: idea,
@@ -137,6 +174,42 @@ const IdeaDetail = () => {
     },
   });
 
+  const updateIdea = useMutation({
+    mutationFn: async (updates: typeof editIdea) => {
+      if (!ideaId) throw new Error("No idea ID provided");
+      
+      const payload = {
+        ...updates,
+        category: updates.category.trim(),
+      };
+      if (!payload.category) {
+        throw new Error("Category is required");
+      }
+      const { error } = await supabase
+        .from("startup_ideas")
+        .update(payload)
+        .eq("id", ideaId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetch();
+      setIsEditDialogOpen(false);
+      setEditIdea({ title: "", description: "", category: "", looking_for: [] });
+      setIsEditingCustomCategory(false);
+      toast({
+        title: "Idea updated!",
+        description: "Your startup idea has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update your idea.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const addComment = useMutation({
     mutationFn: async () => {
       if (!user || !ideaId) throw new Error("You need to be signed in to comment.");
@@ -190,6 +263,50 @@ const IdeaDetail = () => {
     addComment.mutate();
   };
 
+  const handleEditIdea = () => {
+    if (!idea) return;
+    setEditIdea({
+      title: idea.title,
+      description: idea.description,
+      category: idea.category,
+      looking_for: idea.looking_for || [],
+    });
+    setIsEditingCustomCategory(!PRESET_CATEGORIES.includes(idea.category));
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSubmitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editIdea.title || !editIdea.description || !editIdea.category) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateIdea.mutate(editIdea);
+  };
+
+  const toggleEditRole = (role: string) => {
+    setEditIdea((prev) => ({
+      ...prev,
+      looking_for: prev.looking_for.includes(role)
+        ? prev.looking_for.filter((r) => r !== role)
+        : [...prev.looking_for, role],
+    }));
+  };
+
+  const handleEditCategorySelect = (category: string) => {
+    setIsEditingCustomCategory(false);
+    setEditIdea((prev) => ({ ...prev, category }));
+  };
+
+  const enableEditingCustomCategory = () => {
+    setIsEditingCustomCategory(true);
+    setEditIdea((prev) => ({ ...prev, category: PRESET_CATEGORIES.includes(prev.category) ? "" : prev.category }));
+  };
+
   const likedByUser = idea?.likes.some((like) => like.user_id === user?.id) ?? false;
   const likeCount = idea?.likes.length ?? 0;
   const commentCount = idea?.comments.length ?? 0;
@@ -224,9 +341,22 @@ const IdeaDetail = () => {
                   <Badge variant="secondary" className="mb-2">{idea.category}</Badge>
                   <h1 className="text-2xl font-display font-semibold text-foreground">{idea.title}</h1>
                 </div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <p>{new Date(idea.created_at).toLocaleDateString()}</p>
-                  <p>Updated {new Date(idea.updated_at).toLocaleDateString()}</p>
+                <div className="flex items-center gap-2">
+                  {idea.user_id === user?.id && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEditIdea}
+                      className="gap-2"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Edit
+                    </Button>
+                  )}
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p>{new Date(idea.created_at).toLocaleDateString()}</p>
+                    <p>Updated {new Date(idea.updated_at).toLocaleDateString()}</p>
+                  </div>
                 </div>
               </div>
               <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{idea.description}</p>
@@ -390,6 +520,107 @@ const IdeaDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Idea Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Your Startup Idea</DialogTitle>
+            <DialogDescription>
+              Update your idea details and collaborator requirements.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Idea Title *</Label>
+              <Input
+                id="edit-title"
+                placeholder="e.g., Mobile Banking for Rural Communities"
+                value={editIdea.title}
+                onChange={(e) => setEditIdea({ ...editIdea, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description *</Label>
+              <Textarea
+                id="edit-description"
+                placeholder="Describe your idea, the problem it solves, and your vision..."
+                rows={4}
+                value={editIdea.description}
+                onChange={(e) => setEditIdea({ ...editIdea, description: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Category *</Label>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_CATEGORIES.map((cat) => (
+                  <Badge
+                    key={cat}
+                    variant={!isEditingCustomCategory && editIdea.category === cat ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => handleEditCategorySelect(cat)}
+                  >
+                    {cat}
+                  </Badge>
+                ))}
+                <Badge
+                  variant={isEditingCustomCategory ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={enableEditingCustomCategory}
+                >
+                  Custom
+                </Badge>
+              </div>
+              {isEditingCustomCategory && (
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="edit-custom-category">Custom Category *</Label>
+                  <Input
+                    id="edit-custom-category"
+                    placeholder="e.g., Climate Tech"
+                    value={editIdea.category}
+                    onChange={(e) => setEditIdea({ ...editIdea, category: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Pick a short, descriptive category to help others discover your idea.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Looking For</Label>
+              <div className="flex flex-wrap gap-2">
+                {roles.map((role) => (
+                  <Badge
+                    key={role}
+                    variant={editIdea.looking_for.includes(role) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleEditRole(role)}
+                  >
+                    {role}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1" disabled={updateIdea.isPending}>
+                {updateIdea.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Update Idea"
+                )}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={updateIdea.isPending}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

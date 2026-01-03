@@ -18,7 +18,8 @@ import {
   Users,
   Search,
   Trash2,
-  Eye
+  Eye,
+  Edit2
 } from "lucide-react";
 import {
   Dialog,
@@ -89,9 +90,18 @@ const Ideas = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [ideaPendingDelete, setIdeaPendingDelete] = useState<StartupIdea | null>(null);
+  const [ideaBeingEdited, setIdeaBeingEdited] = useState<StartupIdea | null>(null);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [isEditingCustomCategory, setIsEditingCustomCategory] = useState(false);
 
   const [newIdea, setNewIdea] = useState({
+    title: "",
+    description: "",
+    category: "",
+    looking_for: [] as string[],
+  });
+
+  const [editIdea, setEditIdea] = useState({
     title: "",
     description: "",
     category: "",
@@ -159,6 +169,40 @@ const Ideas = () => {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to post your idea.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateIdea = useMutation({
+    mutationFn: async ({ ideaId, updates }: { ideaId: string; updates: typeof editIdea }) => {
+      const payload = {
+        ...updates,
+        category: updates.category.trim(),
+      };
+      if (!payload.category) {
+        throw new Error("Category is required");
+      }
+      const { error } = await supabase
+        .from("startup_ideas")
+        .update(payload)
+        .eq("id", ideaId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["startup-ideas"] });
+      setIdeaBeingEdited(null);
+      setEditIdea({ title: "", description: "", category: "", looking_for: [] });
+      setIsEditingCustomCategory(false);
+      toast({
+        title: "Idea updated!",
+        description: "Your startup idea has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update your idea.",
         variant: "destructive",
       });
     },
@@ -242,14 +286,57 @@ const Ideas = () => {
     }));
   };
 
+  const toggleEditRole = (role: string) => {
+    setEditIdea((prev) => ({
+      ...prev,
+      looking_for: prev.looking_for.includes(role)
+        ? prev.looking_for.filter((r) => r !== role)
+        : [...prev.looking_for, role],
+    }));
+  };
+
   const handleCategorySelect = (category: string) => {
     setIsCustomCategory(false);
     setNewIdea((prev) => ({ ...prev, category }));
   };
 
+  const handleEditCategorySelect = (category: string) => {
+    setIsEditingCustomCategory(false);
+    setEditIdea((prev) => ({ ...prev, category }));
+  };
+
   const enableCustomCategory = () => {
     setIsCustomCategory(true);
     setNewIdea((prev) => ({ ...prev, category: PRESET_CATEGORIES.includes(prev.category) ? "" : prev.category }));
+  };
+
+  const enableEditingCustomCategory = () => {
+    setIsEditingCustomCategory(true);
+    setEditIdea((prev) => ({ ...prev, category: PRESET_CATEGORIES.includes(prev.category) ? "" : prev.category }));
+  };
+
+  const handleEditIdea = (idea: StartupIdea) => {
+    setIdeaBeingEdited(idea);
+    setEditIdea({
+      title: idea.title,
+      description: idea.description,
+      category: idea.category,
+      looking_for: idea.looking_for || [],
+    });
+    setIsEditingCustomCategory(!PRESET_CATEGORIES.includes(idea.category));
+  };
+
+  const handleSubmitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editIdea.title || !editIdea.description || !editIdea.category || !ideaBeingEdited) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateIdea.mutate({ ideaId: ideaBeingEdited.id, updates: editIdea });
   };
 
   const handleToggleLike = (idea: StartupIdea) => {
@@ -382,6 +469,107 @@ const Ideas = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Idea Dialog */}
+        <Dialog open={!!ideaBeingEdited} onOpenChange={(open) => !open && setIdeaBeingEdited(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Your Startup Idea</DialogTitle>
+              <DialogDescription>
+                Update your idea details and collaborator requirements.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmitEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Idea Title *</Label>
+                <Input
+                  id="edit-title"
+                  placeholder="e.g., Mobile Banking for Rural Communities"
+                  value={editIdea.title}
+                  onChange={(e) => setEditIdea({ ...editIdea, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description *</Label>
+                <Textarea
+                  id="edit-description"
+                  placeholder="Describe your idea, the problem it solves, and your vision..."
+                  rows={4}
+                  value={editIdea.description}
+                  onChange={(e) => setEditIdea({ ...editIdea, description: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Category *</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_CATEGORIES.map((cat) => (
+                    <Badge
+                      key={cat}
+                      variant={!isEditingCustomCategory && editIdea.category === cat ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => handleEditCategorySelect(cat)}
+                    >
+                      {cat}
+                    </Badge>
+                  ))}
+                  <Badge
+                    variant={isEditingCustomCategory ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={enableEditingCustomCategory}
+                  >
+                    Custom
+                  </Badge>
+                </div>
+                {isEditingCustomCategory && (
+                  <div className="space-y-2 pt-2">
+                    <Label htmlFor="edit-custom-category">Custom Category *</Label>
+                    <Input
+                      id="edit-custom-category"
+                      placeholder="e.g., Climate Tech"
+                      value={editIdea.category}
+                      onChange={(e) => setEditIdea({ ...editIdea, category: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Pick a short, descriptive category to help others discover your idea.
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Looking For</Label>
+                <div className="flex flex-wrap gap-2">
+                  {roles.map((role) => (
+                    <Badge
+                      key={role}
+                      variant={editIdea.looking_for.includes(role) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => toggleEditRole(role)}
+                    >
+                      {role}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1" disabled={updateIdea.isPending}>
+                  {updateIdea.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Update Idea"
+                  )}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIdeaBeingEdited(null)}
+                  disabled={updateIdea.isPending}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Category Filters */}
@@ -425,25 +613,47 @@ const Ideas = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredIdeas.map((idea) => (
-            <div
+            <Link
               key={idea.id}
-              className="bg-card rounded-2xl border border-border p-6 hover:shadow-elevated transition-shadow"
+              to={`/ideas/${idea.id}`}
+              className="block bg-card rounded-2xl border border-border p-6 hover:shadow-elevated transition-all duration-200 hover:border-terracotta/20"
             >
               <div className="flex items-start justify-between mb-4 gap-3">
                 <Badge variant="secondary">{idea.category}</Badge>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{new Date(idea.created_at).toLocaleDateString()}</span>
-                  {(idea.user_id === user?.id || isAdmin) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => setIdeaPendingDelete(idea)}
-                      aria-label="Delete idea"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+                    {idea.user_id === user?.id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-terracotta"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleEditIdea(idea);
+                        }}
+                        aria-label="Edit idea"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {(idea.user_id === user?.id || isAdmin) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIdeaPendingDelete(idea);
+                        }}
+                        aria-label="Delete idea"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -493,7 +703,7 @@ const Ideas = () => {
                     <p className="text-xs text-muted-foreground">{idea.profiles?.university}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
                   {(() => {
                     const likedByUser = idea.idea_likes?.some((like) => like.user_id === user?.id);
                     const likeCount = idea.idea_likes?.length ?? 0;
@@ -504,7 +714,11 @@ const Ideas = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleToggleLike(idea)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleToggleLike(idea);
+                          }}
                           disabled={isUpdatingLike}
                           className="gap-1"
                           aria-label="Toggle like"
@@ -516,24 +730,16 @@ const Ideas = () => {
                           )}
                           <span className="text-xs font-medium">{likeCount}</span>
                         </Button>
-                        <Button asChild variant="outline" size="sm" className="gap-1">
-                          <Link to={`/ideas/${idea.id}`}>
-                            <MessageSquare className="w-4 h-4" />
-                            {commentCount}
-                          </Link>
-                        </Button>
-                        <Button asChild variant="ghost" size="sm" className="gap-1">
-                          <Link to={`/ideas/${idea.id}`}>
-                            <Eye className="w-4 h-4" />
-                            View details
-                          </Link>
-                        </Button>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MessageSquare className="w-4 h-4" />
+                          <span className="text-xs font-medium">{commentCount}</span>
+                        </div>
                       </>
                     );
                   })()}
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
